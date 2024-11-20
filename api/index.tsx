@@ -15,10 +15,10 @@ const MOXIE_API_URL = "https://api.studio.thegraph.com/query/23537/moxie_protoco
 
 // Define types
 interface Card {
-  value: number;
-  suit: string;
-  label: string;
-  imagePath: string;
+  v: number;
+  s: string;
+  l: string;
+  p: string;
 }
 
 type GameState = {
@@ -45,14 +45,14 @@ function getCardLabel(value: number): string {
 function createDeck(): Card[] {
   const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
   const values = Array.from({ length: 13 }, (_, i) => i + 1);
-  const deck = suits.flatMap((suit) => 
-    values.map((value) => {
-      const label = getCardLabel(value);
+  const deck = suits.flatMap((s) => 
+    values.map((v) => {
+      const l = getCardLabel(v);
       return {
-        value,
-        suit,
-        label: `${label} of ${suit}`,
-        imagePath: `/api/public/assets/cards/${value}_of_${suit}.png`
+        v,
+        s,
+        l: `${l} of ${s}`,
+        p: `/api/public/assets/cards/${v}_of_${s}.png`
       };
     })
   );
@@ -174,19 +174,19 @@ function handleTurn(state: GameState): GameState {
     state.computerCard = state.computerDeck.pop() || null;
 
     if (state.playerCard && state.computerCard) {
-      if (state.playerCard.value === state.computerCard.value) {
+      if (state.playerCard.v === state.computerCard.v) {
         state.isWar = true;
         state.gameStatus = 'war';
         state.warPile.push(state.playerCard, state.computerCard);
         state.message = "It's WAR! Draw again for the war!";
       } else {
-        const winner = state.playerCard.value > state.computerCard.value ? 'player' : 'computer';
+        const winner = state.playerCard.v > state.computerCard.v ? 'player' : 'computer';
         if (winner === 'player') {
           state.playerDeck.unshift(state.playerCard, state.computerCard);
-          state.message = `You win this round! (${state.playerCard.label} vs ${state.computerCard.label})`;
+          state.message = `You win this round! (${state.playerCard.l} vs ${state.computerCard.l})`;
         } else {
           state.computerDeck.unshift(state.playerCard, state.computerCard);
-          state.message = `Computer wins this round! (${state.playerCard.label} vs ${state.computerCard.label})`;
+          state.message = `Computer wins this round! (${state.playerCard.l} vs ${state.computerCard.l})`;
         }
       }
     }
@@ -363,8 +363,8 @@ app.frame('/game', async (c) => {
             marginBottom: '30px'
           }}>
             <img 
-              src={state.playerCard.imagePath}
-              alt={state.playerCard.label}
+              src={state.playerCard.p}
+              alt={state.playerCard.l}
               style={{ 
                 width: '200px', 
                 height: 'auto',
@@ -378,8 +378,8 @@ app.frame('/game', async (c) => {
               color: '#FFD700'
             }}>VS</div>
             <img 
-              src={state.computerCard.imagePath}
-              alt={state.computerCard.label}
+              src={state.computerCard.p}
+              alt={state.computerCard.l}
               style={{ 
                 width: '200px', 
                 height: 'auto',
