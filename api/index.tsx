@@ -288,53 +288,37 @@ app.frame('/game', async (c) => {
   return c.res({
     image: (
       <div style={{
+        width: '1080px',
+        height: '1080px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        width: '1080px',
-        height: '1080px',
-        backgroundImage: 'url(https://bafybeidmy2f6x42tjkgtrsptnntcjulfehlvt3ddjoyjbieaz7sywohpxy.ipfs.w3s.link/Frame%2039%20(1).png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundColor: '#1a1a1a',
         color: 'white',
-        padding: '40px',
-        fontFamily: '"Silkscreen", sans-serif',
+        position: 'relative'
       }}>
-        {/* Profile and Score Section */}
+        {/* Profile Section */}
         <div style={{ 
+          position: 'absolute',
+          top: '40px',
           display: 'flex',
           alignItems: 'center',
-          gap: '20px',
-          marginBottom: '30px'
+          gap: '20px'
         }}>
-          {profileImage ? (
+          {profileImage && (
             <img 
               src={profileImage}
               alt={username}
               style={{
-                width: '80px',
-                height: '80px',
+                width: '60px',
+                height: '60px',
                 borderRadius: '50%',
-                border: '3px solid white'
+                border: '2px solid white'
               }}
             />
-          ) : (
-            <div style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '50%',
-              border: '3px solid white',
-              backgroundColor: '#303095',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px'
-            }}>
-              {username[0]}
-            </div>
           )}
-          <div style={{ fontSize: '32px', fontWeight: 'bold' }}>
+          <div style={{ fontSize: '24px' }}>
             {username} vs CPU
           </div>
         </div>
@@ -342,13 +326,9 @@ app.frame('/game', async (c) => {
         {/* Card Count Display */}
         <div style={{ 
           display: 'flex',
-          justifyContent: 'space-between',
-          width: '80%',
-          fontSize: '28px',
-          marginBottom: '30px',
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          padding: '20px',
-          borderRadius: '10px'
+          fontSize: '24px',
+          gap: '40px',
+          marginBottom: '20px'
         }}>
           <div>Your Cards: {state.playerDeck.length}</div>
           <div>CPU Cards: {state.computerDeck.length}</div>
@@ -358,58 +338,33 @@ app.frame('/game', async (c) => {
         {state.playerCard && state.computerCard ? (
           <div style={{ 
             display: 'flex',
-            gap: '60px',
-            alignItems: 'center',
-            marginBottom: '30px'
+            gap: '40px',
+            alignItems: 'center'
           }}>
             <img 
               src={state.playerCard.p}
               alt={state.playerCard.l}
-              style={{ 
-                width: '200px', 
-                height: 'auto',
-                transform: 'rotate(-5deg)',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
-              }}
+              style={{ width: '180px', height: 'auto' }}
             />
-            <div style={{ 
-              fontSize: '48px',
-              fontWeight: 'bold',
-              color: '#FFD700'
-            }}>VS</div>
+            <div style={{ fontSize: '36px' }}>VS</div>
             <img 
               src={state.computerCard.p}
               alt={state.computerCard.l}
-              style={{ 
-                width: '200px', 
-                height: 'auto',
-                transform: 'rotate(5deg)',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
-              }}
+              style={{ width: '180px', height: 'auto' }}
             />
           </div>
         ) : (
-          <div style={{ 
-            fontSize: '36px',
-            marginBottom: '30px',
-            textAlign: 'center',
-            padding: '20px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '10px'
-          }}>
-            Draw a card to begin!
+          <div style={{ fontSize: '24px' }}>
+            Click Draw Card to play!
           </div>
         )}
 
         {/* Game Message */}
         <div style={{ 
-          fontSize: '32px',
+          fontSize: '36px',
           textAlign: 'center',
-          marginBottom: '20px',
-          padding: '20px',
-          backgroundColor: state.isWar ? 'rgba(255, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '10px',
-          width: '80%'
+          margin: '20px 0',
+          color: state.isWar ? '#ff4444' : 'white'
         }}>
           {state.message}
         </div>
@@ -417,12 +372,8 @@ app.frame('/game', async (c) => {
         {/* War Alert */}
         {state.isWar && (
           <div style={{ 
-            fontSize: '72px',
-            fontWeight: 'bold',
-            color: '#ff4444',
-            textShadow: '0 0 10px rgba(255,0,0,0.5)',
-            animation: 'pulse 1s infinite',
-            marginBottom: '20px'
+            fontSize: '64px',
+            color: '#ff4444'
           }}>
             WAR!
           </div>
@@ -432,8 +383,7 @@ app.frame('/game', async (c) => {
     intents: [
       state.gameStatus === 'ended' 
         ? <Button action="/">Play Again</Button>
-        : <Button value={`draw:${encodedState}`}>Draw Card</Button>,
-      <Button action="/share">Your Stats</Button>
+        : <Button value={`draw:${encodedState}`}>Draw Card</Button>
     ]
   });
 });
