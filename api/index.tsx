@@ -197,7 +197,7 @@ function handleTurn(state: GameState): GameState {
     state.g = 'p';
   }
 
-  // Check for game over
+  // Check for game overs
   if (state.p.length === 0 || state.c.length === 0) {
     state.g = 'e';
     state.m = state.p.length === 0 ? 'Game Over! Computer Wins!' : 'Game Over! You Win!';
