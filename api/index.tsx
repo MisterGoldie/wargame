@@ -283,7 +283,9 @@ app.frame('/game', async (c) => {
         width: '1080px',
         height: '1080px',
         backgroundColor: '#1a1a1a',
-        color: 'white'
+        color: 'white',
+        backgroundImage: 'linear-gradient(to bottom right, #1a1a1a, #2a2a2a)',
+        padding: '40px'
       }}>
         <div style={{
           display: 'flex',
