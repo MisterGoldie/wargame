@@ -260,7 +260,6 @@ app.frame('/game', async (c) => {
     }
   }
 
-  // Handle game state
   let state: GameState;
   if (buttonValue?.startsWith('draw:')) {
     const encodedState = buttonValue.split(':')[1];
@@ -286,81 +285,46 @@ app.frame('/game', async (c) => {
         width: '1080px',
         height: '1080px',
         backgroundColor: '#1a1a1a',
-        color: 'white',
-        padding: '40px'
+        color: 'white'
       }}>
-        {/* Profile Section */}
-        {profileImage && (
-          <div style={{ 
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: '10px',
-            marginBottom: '20px'
-          }}>
-            <img 
-              src={profileImage}
-              alt={username}
-              width="60"
-              height="60"
-              style={{
-                borderRadius: '50%',
-                border: '2px solid white'
-              }}
-            />
-            <div style={{ fontSize: '24px' }}>{username} vs CPU</div>
-          </div>
-        )}
-
-        {/* Card Counts */}
-        <div style={{ 
-          display: 'flex',
-          flexDirection: 'row',
-          justifyContent: 'center',
-          gap: '40px',
-          marginBottom: '20px'
-        }}>
-          <div style={{ fontSize: '24px' }}>Your Cards: {state.p.length}</div>
-          <div style={{ fontSize: '24px' }}>CPU Cards: {state.c.length}</div>
-        </div>
-
-        {/* Cards */}
-        <div style={{ 
-          display: 'flex',
-          flexDirection: 'row',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '40px',
-          marginBottom: '20px'
-        }}>
-          {state.pc && state.cc ? (
-            <>
-              {getCardSVG(state.pc)}
-              <div style={{ fontSize: '36px' }}>VS</div>
-              {getCardSVG(state.cc)}
-            </>
-          ) : (
-            <div style={{ fontSize: '24px' }}>
-              Draw a card to begin!
-            </div>
-          )}
-        </div>
-
-        {/* Status */}
-        <div style={{ 
+        <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: '10px'
+          gap: '20px'
         }}>
-          <div style={{ 
+          {/* Card Counts */}
+          <div style={{
+            display: 'flex',
+            gap: '40px',
+            fontSize: '24px'
+          }}>
+            <span>Your Cards: {state.p.length}</span>
+            <span>CPU Cards: {state.c.length}</span>
+          </div>
+
+          {/* Cards */}
+          {state.pc && state.cc && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '40px'
+            }}>
+              {getCardSVG(state.pc)}
+              <div style={{ fontSize: '36px' }}>VS</div>
+              {getCardSVG(state.cc)}
+            </div>
+          )}
+
+          {/* Message */}
+          <div style={{
             fontSize: '36px',
             color: state.iw ? '#ff4444' : 'white',
             textAlign: 'center'
           }}>
             {state.m}
           </div>
+          
           {state.iw && (
             <div style={{ 
               fontSize: '64px',
