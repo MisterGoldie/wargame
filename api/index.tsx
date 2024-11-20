@@ -251,24 +251,27 @@ app.frame('/game', async (c) => {
   const { buttonValue } = c;
   let state: GameState;
 
-  try {
-    if (buttonValue?.startsWith('draw:')) {
+  if (buttonValue?.startsWith('draw:')) {
+    try {
       const encodedState = buttonValue.split(':')[1];
-      state = encodedState 
-        ? handleTurn(JSON.parse(Buffer.from(encodedState, 'base64').toString()))
-        : initializeGame();
-    } else {
+      if (encodedState) {
+        const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
+        console.log('Decoded state:', decodedState);
+        state = handleTurn(decodedState);
+      } else {
+        console.log('No encoded state found, initializing new game');
+        state = initializeGame();
+      }
+    } catch (error) {
+      console.error('Error handling game state:', error);
       state = initializeGame();
     }
-  } catch (error) {
-    console.error('Error handling game state:', error);
+  } else {
+    console.log('No button value, initializing new game');
     state = initializeGame();
   }
 
-  // Don't encode state if game is over
-  const buttonAction = state.g === 'e' 
-    ? { action: '/' }
-    : { value: `draw:${Buffer.from(JSON.stringify(state)).toString('base64')}` };
+  console.log('Current state:', state);
 
   return c.res({
     image: (
@@ -293,18 +296,25 @@ app.frame('/game', async (c) => {
           padding: '40px',
           borderRadius: '15px'
         }}>
-          {/* Score */}
-          <div style={{ display: 'flex', gap: '40px', fontSize: '24px' }}>
+          <div style={{
+            display: 'flex',
+            gap: '40px',
+            fontSize: '24px'
+          }}>
             <span>You: {state.p.length}</span>
             <span>CPU: {state.c.length}</span>
           </div>
 
-          {/* Active Cards */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '40px', minHeight: '260px' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '40px',
+            minHeight: '260px'
+          }}>
             {state.pc && state.cc ? (
               <>
                 {getCardSVG(state.pc)}
-                <div style={{ fontSize: '36px' }}>VS</div>
+                <div style={{ fontSize: '36px', fontWeight: 'bold' }}>VS</div>
                 {getCardSVG(state.cc)}
               </>
             ) : (
@@ -312,19 +322,40 @@ app.frame('/game', async (c) => {
             )}
           </div>
 
-          {/* Message */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-            <div style={{ fontSize: '36px', color: state.iw ? '#ff4444' : 'white', textAlign: 'center' }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px'
+          }}>
+            <div style={{ 
+              fontSize: '36px', 
+              color: state.iw ? '#ff4444' : 'white',
+              textAlign: 'center'
+            }}>
               {state.m}
             </div>
             {state.iw && (
-              <div style={{ fontSize: '64px', color: '#ff4444' }}>WAR!</div>
+              <div style={{ 
+                fontSize: '64px', 
+                color: '#ff4444',
+                fontWeight: 'bold' 
+              }}>
+                WAR!
+              </div>
             )}
           </div>
         </div>
       </div>
     ),
-    intents: [<Button {...buttonAction}>{state.g === 'e' ? 'Play Again' : 'Draw Card'}</Button>]
+    intents: [
+      <Button 
+        action={state.g === 'e' ? '/' : undefined}
+        value={state.g !== 'e' ? `draw:${Buffer.from(JSON.stringify(state)).toString('base64')}` : undefined}
+      >
+        {state.g === 'e' ? 'Play Again' : 'Draw Card'}
+      </Button>
+    ]
   });
 });
 
