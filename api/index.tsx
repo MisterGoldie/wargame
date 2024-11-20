@@ -22,14 +22,14 @@ interface Card {
 }
 
 type GameState = {
-  playerDeck: Card[];
-  computerDeck: Card[];
-  playerCard: Card | null;
-  computerCard: Card | null;
-  warPile: Card[];
-  message: string;
-  gameStatus: 'initial' | 'playing' | 'war' | 'ended';
-  isWar: boolean;
+  p: any;
+  c: any;
+  pc: any;
+  cc: any;
+  w: any;
+  m: any;
+  g: string;
+  iw: boolean;
 };
 
 function getCardLabel(value: number): string {
@@ -69,14 +69,14 @@ function initializeGame(): GameState {
   const deck = createDeck();
   const midpoint = Math.floor(deck.length / 2);
   return {
-    playerDeck: deck.slice(0, midpoint),
-    computerDeck: deck.slice(midpoint),
-    playerCard: null,
-    computerCard: null,
-    warPile: [],
-    message: 'Welcome to War! Draw a card to begin.',
-    gameStatus: 'initial',
-    isWar: false
+    p: deck.slice(0, midpoint),    // playerDeck
+    c: deck.slice(midpoint),       // computerDeck
+    pc: null,                      // playerCard
+    cc: null,                      // computerCard
+    w: [],                         // warPile
+    m: 'Welcome to War! Draw a card to begin.',  // message
+    g: 'i',                        // gameStatus: initial
+    iw: false                      // isWar
   };
 }
 
@@ -168,24 +168,24 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
-  if (!state.isWar) {
-    state.playerCard = state.playerDeck.pop() || null;
-    state.computerCard = state.computerDeck.pop() || null;
+  if (!state.iw) {
+    state.pc = state.p.pop() || null;
+    state.cc = state.c.pop() || null;
 
-    if (state.playerCard && state.computerCard) {
-      if (state.playerCard.v === state.computerCard.v) {
-        state.isWar = true;
-        state.gameStatus = 'war';
-        state.warPile.push(state.playerCard, state.computerCard);
-        state.message = "It's WAR! Draw again for the war!";
+    if (state.pc && state.cc) {
+      if (state.pc.v === state.cc.v) {
+        state.iw = true;
+        state.g = 'w';
+        state.w.push(state.pc, state.cc);
+        state.m = "It's WAR! Draw again for the war!";
       } else {
-        const winner = state.playerCard.v > state.computerCard.v ? 'player' : 'computer';
+        const winner = state.pc.v > state.cc.v ? 'player' : 'computer';
         if (winner === 'player') {
-          state.playerDeck.unshift(state.playerCard, state.computerCard);
-          state.message = `You win this round! (${state.playerCard.l} vs ${state.computerCard.l})`;
+          state.p.unshift(state.pc, state.cc);
+          state.m = `You win this round! (${state.pc.l} vs ${state.cc.l})`;
         } else {
-          state.computerDeck.unshift(state.playerCard, state.computerCard);
-          state.message = `Computer wins this round! (${state.playerCard.l} vs ${state.computerCard.l})`;
+          state.c.unshift(state.pc, state.cc);
+          state.m = `Computer wins this round! (${state.pc.l} vs ${state.cc.l})`;
         }
       }
     }
@@ -193,21 +193,21 @@ function handleTurn(state: GameState): GameState {
     // Handle war
     const warCards: Card[] = [];
     for (let i = 0; i < 3; i++) {
-      const playerWarCard = state.playerDeck.pop();
-      const computerWarCard = state.computerDeck.pop();
+      const playerWarCard = state.p.pop();
+      const computerWarCard = state.c.pop();
       if (playerWarCard && computerWarCard) {
         warCards.push(playerWarCard, computerWarCard);
       }
     }
-    state.warPile.push(...warCards);
-    state.isWar = false;
-    state.gameStatus = 'playing';
+    state.w.push(...warCards);
+    state.iw = false;
+    state.g = 'p';
   }
 
   // Check for game over
-  if (state.playerDeck.length === 0 || state.computerDeck.length === 0) {
-    state.gameStatus = 'ended';
-    state.message = state.playerDeck.length === 0 ? 'Game Over! Computer Wins!' : 'Game Over! You Win!';
+  if (state.p.length === 0 || state.c.length === 0) {
+    state.g = 'e';
+    state.m = state.p.length === 0 ? 'Game Over! Computer Wins!' : 'Game Over! You Win!';
   }
 
   return state;
@@ -328,26 +328,26 @@ app.frame('/game', async (c) => {
           gap: '40px',
           marginBottom: '20px'
         }}>
-          <div>Your Cards: {state.playerDeck.length}</div>
-          <div>CPU Cards: {state.computerDeck.length}</div>
+          <div>Your Cards: {state.p.length}</div>
+          <div>CPU Cards: {state.c.length}</div>
         </div>
 
         {/* Card Display */}
-        {state.playerCard && state.computerCard ? (
+        {state.pc && state.cc ? (
           <div style={{ 
             display: 'flex',
             gap: '40px',
             alignItems: 'center'
           }}>
             <img 
-              src={state.playerCard.p}
-              alt={state.playerCard.l}
+              src={getCardDisplay(state.pc).path}
+              alt={getCardDisplay(state.pc).label}
               style={{ width: '180px', height: 'auto' }}
             />
             <div style={{ fontSize: '36px' }}>VS</div>
             <img 
-              src={state.computerCard.p}
-              alt={state.computerCard.l}
+              src={getCardDisplay(state.cc).path}
+              alt={getCardDisplay(state.cc).label}
               style={{ width: '180px', height: 'auto' }}
             />
           </div>
@@ -362,13 +362,13 @@ app.frame('/game', async (c) => {
           fontSize: '36px',
           textAlign: 'center',
           margin: '20px 0',
-          color: state.isWar ? '#ff4444' : 'white'
+          color: state.iw ? '#ff4444' : 'white'
         }}>
-          {state.message}
+          {state.m}
         </div>
 
         {/* War Alert */}
-        {state.isWar && (
+        {state.iw && (
           <div style={{ 
             fontSize: '64px',
             color: '#ff4444'
@@ -379,7 +379,7 @@ app.frame('/game', async (c) => {
       </div>
     ),
     intents: [
-      state.gameStatus === 'ended' 
+      state.g === 'e' 
         ? <Button action="/">Play Again</Button>
         : <Button value={`draw:${encodedState}`}>Draw Card</Button>
     ]
@@ -388,3 +388,21 @@ app.frame('/game', async (c) => {
 
 export const GET = app.fetch;
 export const POST = app.fetch;
+
+// Add this helper function to get full card details for display
+function getCardDisplay(card: Card): { path: string; label: string } {
+  const suitMap = { 
+    'c': 'clubs', 
+    'd': 'diamonds', 
+    'h': 'hearts', 
+    's': 'spades' 
+  };
+  
+  const label = `${getCardLabel(card.v)} of ${suitMap[card.s as keyof typeof suitMap]}`;
+  const fullSuit = suitMap[card.s as keyof typeof suitMap];
+  
+  return {
+    label,
+    path: `/api/public/assets/cards/${card.v}_of_${fullSuit}.png`
+  };
+}
