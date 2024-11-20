@@ -284,9 +284,7 @@ app.frame('/game', async (c) => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundImage: 'url(https://bafybeidmy2f6x42tjkgtrsptnntcjulfehlvt3ddjoyjbieaz7sywohpxy.ipfs.w3s.link/Frame%2039%20(1).png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundColor: '#1a1a1a',
         color: 'white',
         position: 'relative'
       }}>
@@ -294,31 +292,34 @@ app.frame('/game', async (c) => {
         <div style={{ 
           position: 'absolute',
           top: '40px',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          left: 0,
+          right: 0,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           gap: '20px'
         }}>
           {profileImage && (
-            <img 
-              src={profileImage}
-              alt={username}
-              style={{
-                width: '60px',
-                height: '60px',
-                borderRadius: '50%',
-                border: '2px solid white'
-              }}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <img 
+                src={profileImage}
+                alt={username}
+                width="60"
+                height="60"
+                style={{
+                  borderRadius: '50%',
+                  border: '2px solid white'
+                }}
+              />
+              <div style={{ fontSize: '24px' }}>
+                {username} vs CPU
+              </div>
+            </div>
           )}
-          <div style={{ fontSize: '24px' }}>
-            {username} vs CPU
-          </div>
         </div>
 
-        {/* Game Content Container */}
-        <div style={{
+        {/* Game Content */}
+        <div style={{ 
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -327,61 +328,59 @@ app.frame('/game', async (c) => {
           {/* Card Count Display */}
           <div style={{ 
             display: 'flex',
-            fontSize: '24px',
             gap: '40px'
           }}>
-            <div>Your Cards: {state.p.length}</div>
-            <div>CPU Cards: {state.c.length}</div>
+            <div style={{ fontSize: '24px' }}>Your Cards: {state.p.length}</div>
+            <div style={{ fontSize: '24px' }}>CPU Cards: {state.c.length}</div>
           </div>
 
           {/* Card Display */}
-          {state.pc && state.cc ? (
-            <div style={{ 
-              display: 'flex',
-              gap: '40px',
-              alignItems: 'center'
-            }}>
-              <img 
-                src={getCardDisplay(state.pc).path}
-                alt={getCardDisplay(state.pc).label}
-                style={{ width: '180px', height: 'auto' }}
-              />
-              <div style={{ fontSize: '36px' }}>VS</div>
-              <img 
-                src={getCardDisplay(state.cc).path}
-                alt={getCardDisplay(state.cc).label}
-                style={{ width: '180px', height: 'auto' }}
-              />
-            </div>
-          ) : (
-            <div style={{ 
-              display: 'flex',
-              fontSize: '24px'
-            }}>
-              Click Draw Card to play!
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+            {state.pc && state.cc ? (
+              <>
+                <img 
+                  src={getCardDisplay(state.pc).path}
+                  alt={getCardDisplay(state.pc).label}
+                  width="180"
+                  height="250"
+                />
+                <div style={{ fontSize: '36px' }}>VS</div>
+                <img 
+                  src={getCardDisplay(state.cc).path}
+                  alt={getCardDisplay(state.cc).label}
+                  width="180"
+                  height="250"
+                />
+              </>
+            ) : (
+              <div style={{ fontSize: '24px' }}>
+                Click Draw Card to play!
+              </div>
+            )}
+          </div>
 
           {/* Game Message */}
           <div style={{ 
             display: 'flex',
-            fontSize: '36px',
-            textAlign: 'center',
-            color: state.iw ? '#ff4444' : 'white'
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '10px'
           }}>
-            {state.m}
-          </div>
-
-          {/* War Alert */}
-          {state.iw && (
             <div style={{ 
-              display: 'flex',
-              fontSize: '64px',
-              color: '#ff4444'
+              fontSize: '36px',
+              color: state.iw ? '#ff4444' : 'white'
             }}>
-              WAR!
+              {state.m}
             </div>
-          )}
+            {state.iw && (
+              <div style={{ 
+                fontSize: '64px',
+                color: '#ff4444'
+              }}>
+                WAR!
+              </div>
+            )}
+          </div>
         </div>
       </div>
     ),
@@ -398,16 +397,16 @@ export const POST = app.fetch;
 
 // Add this helper function to get full card details for display
 function getCardDisplay(card: Card): { path: string; label: string } {
-  const suitMap = { 
-    'c': 'clubs', 
-    'd': 'diamonds', 
-    'h': 'hearts', 
-    's': 'spades' 
+  const suitMap: Record<string, string> = {
+    'c': 'clubs',
+    'd': 'diamonds',
+    'h': 'hearts',
+    's': 'spades'
   };
-  const fullSuit = suitMap[card.s as keyof typeof suitMap];
-  const label = `${getCardLabel(card.v)} of ${fullSuit}`;
+  
+  const label = `${getCardLabel(card.v)} of ${suitMap[card.s]}`;
   return {
     label,
-    path: `/api/public/assets/cards/${card.v}_of_${fullSuit}.png`
+    path: `/public/assets/cards/${card.v}_of_${suitMap[card.s]}.png`
   };
 }
