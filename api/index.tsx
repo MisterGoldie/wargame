@@ -154,17 +154,19 @@ async function getUserProfilePicture(fid: string): Promise<string | null> {
 // Create Frog app instance
 export const app = new Frog<{ Variables: NeynarVariables }>({
   basePath: '/api',
-  initialState: {
-    playerDeck: [],
-    computerDeck: [],
-    playerCard: null,
-    computerCard: null,
-    warPile: [],
-    message: '',
-    gameStatus: 'initial',
-    isWar: false
+  imageOptions: {
+    width: 1080,
+    height: 1080,
+    fonts: [
+      {
+        name: 'Silkscreen',
+        source: 'google',
+        weight: 400,
+      }
+    ],
   },
-  title: 'Frog Game'
+  imageAspectRatio: '1:1',
+  title: 'WAR Card Game'
 });
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
@@ -226,8 +228,7 @@ app.frame('/', (c) => {
         width: '1080px',
         height: '1080px',
         backgroundColor: '#1a1a1a',
-        color: 'white',
-        padding: '40px'
+        color: 'white'
       }}>
         <div style={{ 
           display: 'flex',
