@@ -46,15 +46,12 @@ function createDeck(): Card[] {
   const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
   const values = Array.from({ length: 13 }, (_, i) => i + 1);
   const deck = suits.flatMap((s) => 
-    values.map((v) => {
-      const l = getCardLabel(v);
-      return {
-        v,
-        s,
-        l: `${l} of ${s}`,
-        p: `/api/public/assets/cards/${v}_of_${s}.png`
-      };
-    })
+    values.map((v) => ({
+      v,
+      s,
+      l: `${getCardLabel(v)} of ${s}`,
+      p: `/api/public/assets/cards/${v}_of_${s}.png`
+    }))
   );
   return shuffle(deck);
 }
