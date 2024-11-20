@@ -151,27 +151,29 @@ function handleTurn(state: GameState): GameState {
 app.frame('/', (c) => {
   return c.res({
     image: (
-      <div
-        style={{
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '1080px',
+        height: '1080px',
+        backgroundColor: '#1a1a1a',
+        color: 'white',
+        padding: '40px'
+      }}>
+        <div style={{ 
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          width: '100%',
-          height: '100%',
-          backgroundColor: '#1a1a1a',
-          color: 'white',
-          padding: '40px'
-        }}
-      >
-        <h1 style={{ fontSize: '72px', marginBottom: '40px' }}>
-          War Card Game
-        </h1>
-        <div style={{ fontSize: '36px', textAlign: 'center', marginBottom: '40px' }}>
-          Classic card game of War!
-        </div>
-        <div style={{ fontSize: '24px', textAlign: 'center' }}>
-          Draw cards and compete against the computer.
+          gap: '20px'
+        }}>
+          <h1 style={{ fontSize: '72px', margin: 0 }}>
+            War Card Game
+          </h1>
+          <div style={{ fontSize: '36px', textAlign: 'center' }}>
+            Click Start to begin!
+          </div>
         </div>
       </div>
     ),
@@ -182,65 +184,38 @@ app.frame('/', (c) => {
 });
 
 app.frame('/game', (c) => {
-  const state: GameState = c.buttonValue?.startsWith('draw:') 
-    ? handleTurn(JSON.parse(Buffer.from(c.buttonValue.split(':')[1], 'base64').toString()))
-    : initializeGame();
-
-  const encodedState = Buffer.from(JSON.stringify(state)).toString('base64');
-
   return c.res({
     image: (
-      <div
-        style={{
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '1080px',
+        height: '1080px',
+        backgroundColor: '#1a1a1a',
+        color: 'white',
+        padding: '40px'
+      }}>
+        <div style={{ 
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
-          width: '100%',
-          height: '100%',
-          backgroundColor: '#1a1a1a',
-          color: 'white',
-          padding: '40px'
-        }}
-      >
-        <div style={{ fontSize: '24px', marginBottom: '20px' }}>
-          Your Cards: {state.playerDeck.length} | Computer Cards: {state.computerDeck.length}
-        </div>
-        <div style={{ fontSize: '36px', marginBottom: '40px', textAlign: 'center' }}>
-          {state.message}
-        </div>
-        {state.playerCard && state.computerCard && (
+          gap: '20px'
+        }}>
           <div style={{ 
-            display: 'flex', 
-            gap: '20px', 
-            marginBottom: '20px',
+            display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center'
           }}>
-            <img 
-              src={state.playerCard.imagePath} 
-              alt={state.playerCard.label}
-              style={{ width: '200px', height: 'auto' }}
-            />
-            <div style={{ fontSize: '36px', margin: '0 20px' }}>VS</div>
-            <img 
-              src={state.computerCard.imagePath} 
-              alt={state.computerCard.label}
-              style={{ width: '200px', height: 'auto' }}
-            />
+            <div style={{ fontSize: '36px', textAlign: 'center' }}>
+              Game Started!
+            </div>
           </div>
-        )}
-        {state.isWar && (
-          <div style={{ fontSize: '64px', color: '#ff4444', marginBottom: '20px' }}>
-            WAR!
-          </div>
-        )}
+        </div>
       </div>
     ),
-    intents: [
-      state.gameStatus === 'ended'
-        ? <Button action="/">Play Again</Button>
-        : <Button value={`draw:${encodedState}`}>Draw Card</Button>
-    ]
+    intents: [<Button action="/">Back to Start</Button>]
   });
 });
 
