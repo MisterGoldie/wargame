@@ -290,93 +290,90 @@ app.frame('/game', async (c) => {
         padding: '40px'
       }}>
         {/* Profile Section */}
+        {profileImage && (
+          <div style={{ 
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: '10px',
+            marginBottom: '20px'
+          }}>
+            <img 
+              src={profileImage}
+              alt={username}
+              width="60"
+              height="60"
+              style={{
+                borderRadius: '50%',
+                border: '2px solid white'
+              }}
+            />
+            <div style={{ fontSize: '24px' }}>{username} vs CPU</div>
+          </div>
+        )}
+
+        {/* Card Counts */}
         <div style={{ 
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '20px',
-          marginBottom: '40px'
+          flexDirection: 'row',
+          justifyContent: 'center',
+          gap: '40px',
+          marginBottom: '20px'
         }}>
-          {profileImage && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <img 
-                src={profileImage}
-                alt={username}
-                width="60"
-                height="60"
-                style={{
-                  borderRadius: '50%',
-                  border: '2px solid white'
-                }}
-              />
-              <div style={{ fontSize: '24px' }}>{username} vs CPU</div>
+          <div style={{ fontSize: '24px' }}>Your Cards: {state.p.length}</div>
+          <div style={{ fontSize: '24px' }}>CPU Cards: {state.c.length}</div>
+        </div>
+
+        {/* Cards */}
+        <div style={{ 
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '40px',
+          marginBottom: '20px'
+        }}>
+          {state.pc && state.cc ? (
+            <>
+              {getCardSVG(state.pc)}
+              <div style={{ fontSize: '36px' }}>VS</div>
+              {getCardSVG(state.cc)}
+            </>
+          ) : (
+            <div style={{ fontSize: '24px' }}>
+              Draw a card to begin!
             </div>
           )}
         </div>
 
-        {/* Game Content with proper spacing */}
+        {/* Status */}
         <div style={{ 
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '20px'
+          justifyContent: 'center',
+          gap: '10px'
         }}>
-          {/* Card Counts */}
           <div style={{ 
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '40px'
+            fontSize: '36px',
+            color: state.iw ? '#ff4444' : 'white',
+            textAlign: 'center'
           }}>
-            <div style={{ fontSize: '24px' }}>Your Cards: {state.p.length}</div>
-            <div style={{ fontSize: '24px' }}>CPU Cards: {state.c.length}</div>
+            {state.m}
           </div>
-
-          {/* Card Display */}
-          <div style={{ 
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '40px'
-          }}>
-            {state.pc && state.cc ? (
-              <>
-                {getCardSVG(state.pc)}
-                <div style={{ fontSize: '36px' }}>VS</div>
-                {getCardSVG(state.cc)}
-              </>
-            ) : (
-              <div style={{ fontSize: '24px' }}>Click Draw Card to play!</div>
-            )}
-          </div>
-
-          {/* Game Status */}
-          <div style={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '10px'
-          }}>
+          {state.iw && (
             <div style={{ 
-              fontSize: '36px',
-              color: state.iw ? '#ff4444' : 'white',
-              textAlign: 'center'
+              fontSize: '64px',
+              color: '#ff4444'
             }}>
-              {state.m}
+              WAR!
             </div>
-            {state.iw && (
-              <div style={{ 
-                fontSize: '64px',
-                color: '#ff4444'
-              }}>
-                WAR!
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
     ),
     intents: [
-      state.g === 'e' 
+      state.g === 'e'
         ? <Button action="/">Play Again</Button>
         : <Button value={`draw:${encodedState}`}>Draw Card</Button>
     ]
