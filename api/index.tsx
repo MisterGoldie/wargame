@@ -1,6 +1,7 @@
 /** @jsxImportSource frog/jsx */
 
 import { Button, Frog } from 'frog'
+import { JSX } from 'frog/jsx';
 import type { NeynarVariables } from 'frog/middlewares'
 import { neynar } from 'frog/middlewares'
 import { gql, GraphQLClient } from "graphql-request";
@@ -339,19 +340,9 @@ app.frame('/game', async (c) => {
           }}>
             {state.pc && state.cc ? (
               <>
-                <img 
-                  src={getCardDisplay(state.pc).path}
-                  alt={getCardDisplay(state.pc).label}
-                  width="180"
-                  height="250"
-                />
+                {getCardSVG(state.pc)}
                 <div style={{ fontSize: '36px' }}>VS</div>
-                <img 
-                  src={getCardDisplay(state.cc).path}
-                  alt={getCardDisplay(state.cc).label}
-                  width="180"
-                  height="250"
-                />
+                {getCardSVG(state.cc)}
               </>
             ) : (
               <div style={{ fontSize: '24px' }}>Click Draw Card to play!</div>
@@ -396,18 +387,63 @@ export const GET = app.fetch;
 export const POST = app.fetch;
 
 // Add this helper function to get full card details for displayS
-function getCardDisplay(card: Card): { path: string; label: string } {
-  const suitMap: Record<string, string> = {
-    'c': 'clubs',
-    'd': 'diamonds',
-    'h': 'hearts',
-    's': 'spades'
+/** @jsxImportSource frog/jsx */
+import { Child } from 'hono/jsx';
+
+// Update function signature to use Child return type
+function getCardSVG(card: Card) {
+  const suitSymbols: Record<string, string> = {
+    'h': '♥',
+    'd': '♦',
+    'c': '♣',
+    's': '♠'
   };
-  
-  const label = `${getCardLabel(card.v)} of ${suitMap[card.s]}`;
-  // Use absolute URL for Vercel OG
-  return {
-    label,
-    path: `https://wargame-neon.vercel.app/api/public/${card.v}_of_${suitMap[card.s]}.png`  // Example: https://wargame-neon.vercel.app/api/public/2_of_diamonds.png
+
+  const suitColors: Record<string, string> = {
+    'h': '#ff0000',
+    'd': '#ff0000',
+    'c': '#000000',
+    's': '#000000'
   };
+
+  return (
+    <div style={{
+      width: '180px',
+      height: '250px',
+      backgroundColor: 'white',
+      borderRadius: '10px',
+      border: '1px solid #000',
+      position: 'relative',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center'
+    }}>
+      <div style={{
+        position: 'absolute',
+        top: '10px',
+        left: '10px',
+        color: suitColors[card.s],
+        fontSize: '24px'
+      }}>
+        {getCardLabel(card.v)}
+      </div>
+      <div style={{
+        color: suitColors[card.s],
+        fontSize: '72px'
+      }}>
+        {suitSymbols[card.s]}
+      </div>
+      <div style={{
+        position: 'absolute',
+        bottom: '10px',
+        right: '10px',
+        color: suitColors[card.s],
+        fontSize: '24px',
+        transform: 'rotate(180deg)'
+      }}>
+        {getCardLabel(card.v)}
+      </div>
+    </div>
+  );
 }
