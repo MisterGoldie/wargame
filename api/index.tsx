@@ -313,9 +313,9 @@ app.frame('/game', async (c) => {
           }}>
             {state.pc && state.cc ? (
               <>
-                {getCardSVG(state.pc)}
+                {getCardDisplay(state.pc)}
                 <div style={{ fontSize: '36px', fontWeight: 'bold' }}>VS</div>
-                {getCardSVG(state.cc)}
+                {getCardDisplay(state.cc)}
               </>
             ) : (
               <div style={{ fontSize: '24px' }}>Draw a card to begin!</div>
@@ -362,8 +362,8 @@ app.frame('/game', async (c) => {
 export const GET = app.fetch;
 export const POST = app.fetch;
 
-// Move getCardSVG here, before it's used
-function getCardSVG(card: Card) {
+// Replace getCardSVG with getCardDisplay
+function getCardDisplay(card: Card) {
   const suitSymbols: Record<string, string> = {
     'h': '♥',
     'd': '♦',
@@ -371,51 +371,26 @@ function getCardSVG(card: Card) {
     's': '♠'
   };
 
-  const suitColors: Record<string, string> = {
-    'h': '#ff0000',
-    'd': '#ff0000',
-    'c': '#000000',
-    's': '#000000'
-  };
-
   return (
     <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       width: '180px',
       height: '250px',
       backgroundColor: 'white',
-      borderRadius: '10px',
-      border: '1px solid #000',
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center'
+      borderRadius: '15px',
+      padding: '20px',
+      color: card.s === 'h' || card.s === 'd' ? '#ff0000' : '#000000',
+      border: '2px solid #000'
     }}>
-      <div style={{
-        position: 'absolute',
-        top: '10px',
-        left: '10px',
-        color: suitColors[card.s],
-        fontSize: '24px'
-      }}>
-        {getCardLabel(card.v)}
-      </div>
-      <div style={{
-        color: suitColors[card.s],
-        fontSize: '72px'
-      }}>
-        {suitSymbols[card.s]}
-      </div>
-      <div style={{
-        position: 'absolute',
-        bottom: '10px',
-        right: '10px',
-        color: suitColors[card.s],
-        fontSize: '24px',
+      <div style={{ fontSize: '32px' }}>{getCardLabel(card.v)}</div>
+      <div style={{ fontSize: '72px' }}>{suitSymbols[card.s]}</div>
+      <div style={{ 
+        fontSize: '32px',
         transform: 'rotate(180deg)'
-      }}>
-        {getCardLabel(card.v)}
-      </div>
+      }}>{getCardLabel(card.v)}</div>
     </div>
   );
 }
