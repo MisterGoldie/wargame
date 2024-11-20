@@ -254,24 +254,33 @@ app.frame('/game', async (c) => {
   if (buttonValue?.startsWith('draw:')) {
     try {
       const encodedState = buttonValue.split(':')[1];
-      if (encodedState) {
-        const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
-        console.log('Decoded state:', decodedState);
-        state = handleTurn(decodedState);
-      } else {
-        console.log('No encoded state found, initializing new game');
-        state = initializeGame();
-      }
+      state = encodedState 
+        ? handleTurn(JSON.parse(Buffer.from(encodedState, 'base64').toString()))
+        : initializeGame();
     } catch (error) {
       console.error('Error handling game state:', error);
       state = initializeGame();
     }
   } else {
-    console.log('No button value, initializing new game');
     state = initializeGame();
   }
 
-  console.log('Current state:', state);
+  // Get card display text
+  const getCardText = (card: Card) => {
+    const suitSymbols: { [key: string]: string } = { 'h': '♥', 'd': '♦', 'c': '♣', 's': '♠' };
+    return `${getCardLabel(card.v)}${suitSymbols[card.s]}`;
+  };
+
+  const cardStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '180px',
+    height: '250px',
+    backgroundColor: 'white',
+    borderRadius: '15px',
+    fontSize: '48px',
+  };
 
   return c.res({
     image: (
@@ -292,59 +301,61 @@ app.frame('/game', async (c) => {
           flexDirection: 'column',
           alignItems: 'center',
           gap: '40px',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
           padding: '40px',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
           borderRadius: '15px'
         }}>
-          <div style={{
-            display: 'flex',
-            gap: '40px',
-            fontSize: '24px'
-          }}>
-            <span>You: {state.p.length}</span>
-            <span>CPU: {state.c.length}</span>
+          <div style={{ display: 'flex', gap: '40px', fontSize: '24px' }}>
+            <div>Your Cards: {state.p.length}</div>
+            <div>CPU Cards: {state.c.length}</div>
           </div>
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '40px',
-            minHeight: '260px'
-          }}>
-            {state.pc && state.cc ? (
-              <>
-                {getCardDisplay(state.pc)}
-                <div style={{ fontSize: '36px', fontWeight: 'bold' }}>VS</div>
-                {getCardDisplay(state.cc)}
-              </>
-            ) : (
-              <div style={{ fontSize: '24px' }}>Draw a card to begin!</div>
-            )}
-          </div>
-
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '20px'
-          }}>
-            <div style={{ 
-              fontSize: '36px', 
-              color: state.iw ? '#ff4444' : 'white',
-              textAlign: 'center'
-            }}>
-              {state.m}
-            </div>
-            {state.iw && (
-              <div style={{ 
-                fontSize: '64px', 
-                color: '#ff4444',
-                fontWeight: 'bold' 
+          {state.pc && state.cc ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+              <div style={{
+                ...cardStyle,
+                color: state.pc.s === 'h' || state.pc.s === 'd' ? '#ff0000' : '#000000'
               }}>
-                WAR!
+                {getCardText(state.pc)}
               </div>
-            )}
+              
+              <div style={{ fontSize: '36px', fontWeight: 'bold' }}>VS</div>
+              
+              <div style={{
+                ...cardStyle,
+                color: state.cc.s === 'h' || state.cc.s === 'd' ? '#ff0000' : '#000000'
+              }}>
+                {getCardText(state.cc)}
+              </div>
+            </div>
+          ) : (
+            <div style={{ 
+              fontSize: '24px',
+              height: '250px',
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              Draw a card to begin!
+            </div>
+          )}
+
+          <div style={{
+            fontSize: '36px',
+            textAlign: 'center',
+            color: state.iw ? '#ff4444' : 'white'
+          }}>
+            {state.m}
           </div>
+
+          {state.iw && (
+            <div style={{
+              fontSize: '64px',
+              color: '#ff4444',
+              fontWeight: 'bold'
+            }}>
+              WAR!
+            </div>
+          )}
         </div>
       </div>
     ),
@@ -361,36 +372,3 @@ app.frame('/game', async (c) => {
 
 export const GET = app.fetch;
 export const POST = app.fetch;
-
-// Replace getCardSVG with getCardDisplay
-function getCardDisplay(card: Card) {
-  const suitSymbols: Record<string, string> = {
-    'h': '♥',
-    'd': '♦',
-    'c': '♣',
-    's': '♠'
-  };
-
-  return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      width: '180px',
-      height: '250px',
-      backgroundColor: 'white',
-      borderRadius: '15px',
-      padding: '20px',
-      color: card.s === 'h' || card.s === 'd' ? '#ff0000' : '#000000',
-      border: '2px solid #000'
-    }}>
-      <div style={{ fontSize: '32px' }}>{getCardLabel(card.v)}</div>
-      <div style={{ fontSize: '72px' }}>{suitSymbols[card.s]}</div>
-      <div style={{ 
-        fontSize: '32px',
-        transform: 'rotate(180deg)'
-      }}>{getCardLabel(card.v)}</div>
-    </div>
-  );
-}
