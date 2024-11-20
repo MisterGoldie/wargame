@@ -17,18 +17,16 @@ const MOXIE_API_URL = "https://api.studio.thegraph.com/query/23537/moxie_protoco
 interface Card {
   v: number;
   s: string;
-  l: string;
-  p: string;
 }
 
 type GameState = {
-  p: any;
-  c: any;
-  pc: any;
-  cc: any;
-  w: any;
-  m: any;
-  g: string;
+  p: Card[];
+  c: Card[];
+  pc: Card | null;
+  cc: Card | null;
+  w: Card[];
+  m: string;
+  g: 'i' | 'p' | 'w' | 'e';
   iw: boolean;
 };
 
@@ -43,17 +41,11 @@ function getCardLabel(value: number): string {
 }
 
 function createDeck(): Card[] {
-  const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
+  const suits = ['c', 'd', 'h', 's'];
   const values = Array.from({ length: 13 }, (_, i) => i + 1);
-  const deck = suits.flatMap((s) => 
-    values.map((v) => ({
-      v,
-      s,
-      l: `${getCardLabel(v)} of ${s}`,
-      p: `/api/public/assets/cards/${v}_of_${s}.png`
-    }))
-  );
-  return shuffle(deck);
+  return shuffle(suits.flatMap(s => 
+    values.map(v => ({ v, s }))
+  ));
 }
 
 function shuffle<T>(array: T[]): T[] {
@@ -182,10 +174,10 @@ function handleTurn(state: GameState): GameState {
         const winner = state.pc.v > state.cc.v ? 'player' : 'computer';
         if (winner === 'player') {
           state.p.unshift(state.pc, state.cc);
-          state.m = `You win this round! (${state.pc.l} vs ${state.cc.l})`;
+          state.m = `You win this round! (${state.pc.v} of ${state.pc.s} vs ${state.cc.v} of ${state.cc.s})`;
         } else {
           state.c.unshift(state.pc, state.cc);
-          state.m = `Computer wins this round! (${state.pc.l} vs ${state.cc.l})`;
+          state.m = `Computer wins this round! (${state.pc.v} of ${state.pc.s} vs ${state.cc.v} of ${state.cc.s})`;
         }
       }
     }
@@ -397,10 +389,8 @@ function getCardDisplay(card: Card): { path: string; label: string } {
     'h': 'hearts', 
     's': 'spades' 
   };
-  
-  const label = `${getCardLabel(card.v)} of ${suitMap[card.s as keyof typeof suitMap]}`;
   const fullSuit = suitMap[card.s as keyof typeof suitMap];
-  
+  const label = `${getCardLabel(card.v)} of ${fullSuit}`;
   return {
     label,
     path: `/api/public/assets/cards/${card.v}_of_${fullSuit}.png`
