@@ -405,9 +405,9 @@ function getCardDisplay(card: Card): { path: string; label: string } {
   };
   
   const label = `${getCardLabel(card.v)} of ${suitMap[card.s]}`;
-  // Match the exact file structure: api/public/[filename]
+  // Use absolute URL for Vercel OG
   return {
     label,
-    path: `public/${card.v}_of_${suitMap[card.s]}.png` // Example: /api/public/2_of_diamonds.png
+    path: `https://wargame-neon.vercel.app/api/public/${card.v}_of_${suitMap[card.s]}.png`  // Example: https://wargame-neon.vercel.app/api/public/2_of_diamonds.png
   };
 }
