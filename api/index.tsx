@@ -395,7 +395,7 @@ app.frame('/game', async (c) => {
 export const GET = app.fetch;
 export const POST = app.fetch;
 
-// Add this helper function to get full card details for display
+// Add this helper function to get full card details for displayS
 function getCardDisplay(card: Card): { path: string; label: string } {
   const suitMap: Record<string, string> = {
     'c': 'clubs',
