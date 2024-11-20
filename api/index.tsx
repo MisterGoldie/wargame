@@ -243,31 +243,24 @@ app.frame('/game', async (c) => {
   const { buttonValue, frameData } = c;
   const fid = frameData?.fid;
 
-  // Get user info
-  let username = 'Player';
-  let profileImage = null;
-  
-  if (fid) {
-    try {
-      [username, profileImage] = await Promise.all([
-        getUsername(fid.toString()),
-        getUserProfilePicture(fid.toString())
-      ]);
-    } catch (error) {
-      console.error('Error getting user info:', error);
-    }
-  }
-
   let state: GameState;
-  if (buttonValue?.startsWith('draw:')) {
-    const encodedState = buttonValue.split(':')[1];
-    if (encodedState) {
-      state = JSON.parse(Buffer.from(encodedState, 'base64').toString());
-      state = handleTurn(state);
+  try {
+    if (buttonValue?.startsWith('draw:')) {
+      const encodedState = buttonValue.split(':')[1];
+      if (encodedState) {
+        const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
+        console.log('Decoded state:', decodedState);
+        state = handleTurn(decodedState);
+      } else {
+        console.log('No encoded state found, initializing new game');
+        state = initializeGame();
+      }
     } else {
+      console.log('No button value, initializing new game');
       state = initializeGame();
     }
-  } else {
+  } catch (error) {
+    console.error('Error handling game state:', error);
     state = initializeGame();
   }
 
