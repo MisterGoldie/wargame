@@ -159,24 +159,32 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
-  if (!state.iw) {
-    state.pc = state.p.pop() || null;
-    state.cc = state.c.pop() || null;
+  // Create a new state object
+  const newState = {
+    ...state,
+    p: [...state.p],
+    c: [...state.c],
+    w: [...state.w]
+  };
 
-    if (state.pc && state.cc) {
-      if (state.pc.v === state.cc.v) {
-        state.iw = true;
-        state.g = 'w';
-        state.w.push(state.pc, state.cc);
-        state.m = "It's WAR! Draw again for the war!";
+  if (!newState.iw) {
+    newState.pc = newState.p.pop() || null;
+    newState.cc = newState.c.pop() || null;
+
+    if (newState.pc && newState.cc) {
+      if (newState.pc.v === newState.cc.v) {
+        newState.iw = true;
+        newState.g = 'w';
+        newState.w.push(newState.pc, newState.cc);
+        newState.m = "It's WAR! Draw again for the war!";
       } else {
-        const winner = state.pc.v > state.cc.v ? 'player' : 'computer';
+        const winner = newState.pc.v > newState.cc.v ? 'player' : 'computer';
         if (winner === 'player') {
-          state.p.unshift(state.pc, state.cc);
-          state.m = `You win this round! (${state.pc.v} of ${state.pc.s} vs ${state.cc.v} of ${state.cc.s})`;
+          newState.p.unshift(newState.pc, newState.cc);
+          newState.m = `You win this round! (${getCardLabel(newState.pc.v)} vs ${getCardLabel(newState.cc.v)})`;
         } else {
-          state.c.unshift(state.pc, state.cc);
-          state.m = `Computer wins this round! (${state.pc.v} of ${state.pc.s} vs ${state.cc.v} of ${state.cc.s})`;
+          newState.c.unshift(newState.pc, newState.cc);
+          newState.m = `Computer wins this round! (${getCardLabel(newState.pc.v)} vs ${getCardLabel(newState.cc.v)})`;
         }
       }
     }
@@ -184,24 +192,24 @@ function handleTurn(state: GameState): GameState {
     // Handle war
     const warCards: Card[] = [];
     for (let i = 0; i < 3; i++) {
-      const playerWarCard = state.p.pop();
-      const computerWarCard = state.c.pop();
+      const playerWarCard = newState.p.pop();
+      const computerWarCard = newState.c.pop();
       if (playerWarCard && computerWarCard) {
         warCards.push(playerWarCard, computerWarCard);
       }
     }
-    state.w.push(...warCards);
-    state.iw = false;
-    state.g = 'p';
+    newState.w.push(...warCards);
+    newState.iw = false;
+    newState.g = 'p';
   }
 
   // Check for game overs
-  if (state.p.length === 0 || state.c.length === 0) {
-    state.g = 'e';
-    state.m = state.p.length === 0 ? 'Game Over! Computer Wins!' : 'Game Over! You Win!';
+  if (newState.p.length === 0 || newState.c.length === 0) {
+    newState.g = 'e';
+    newState.m = newState.p.length === 0 ? 'Game Over! Computer Wins!' : 'Game Over! You Win!';
   }
 
-  return state;
+  return newState;
 }
 
 // Routes
