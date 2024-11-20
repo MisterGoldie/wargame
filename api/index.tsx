@@ -36,7 +36,7 @@ function getCardLabel(value: number): string {
   return specialCards[value] || value.toString();
 }
 
-function createShuffledDeck(): Card[] {
+function createDeck(): Card[] {
   const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
   const values = Array.from({ length: 13 }, (_, i) => i + 1);
   const deck = suits.flatMap((suit) => 
@@ -57,15 +57,13 @@ function shuffle<T>(array: T[]): T[] {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    const temp = newArray[i]!;
-    newArray[i] = newArray[j]!;
-    newArray[j] = temp;
+    [newArray[i], newArray[j]] = [newArray[j]!, newArray[i]!];
   }
   return newArray;
 }
 
 function initializeGame(): GameState {
-  const deck = createShuffledDeck();
+  const deck = createDeck();
   const midpoint = Math.floor(deck.length / 2);
   return {
     playerDeck: deck.slice(0, midpoint),
@@ -79,13 +77,7 @@ function initializeGame(): GameState {
   };
 }
 
-function encodeState(state: GameState): string {
-  return Buffer.from(JSON.stringify(state)).toString('base64');
-}
 
-function decodeState(encodedState: string): GameState {
-  return JSON.parse(Buffer.from(encodedState, 'base64').toString());
-}
 
 // Create Frog app instance
 export const app = new Frog<{ Variables: NeynarVariables }>({
@@ -160,8 +152,8 @@ app.frame('/', (c) => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          width: '1080px',
-          height: '1080px',
+          width: '100%',
+          height: '100%',
           backgroundColor: '#1a1a1a',
           color: 'white',
           padding: '40px'
@@ -185,22 +177,11 @@ app.frame('/', (c) => {
 });
 
 app.frame('/game', (c) => {
-  const { buttonValue } = c;
-  let state: GameState;
+  const state: GameState = c.buttonValue?.startsWith('draw:') 
+    ? handleTurn(JSON.parse(Buffer.from(c.buttonValue.split(':')[1], 'base64').toString()))
+    : initializeGame();
 
-  if (buttonValue?.startsWith('draw:')) {
-    const encodedState = buttonValue.split(':')[1];
-    if (encodedState) {
-      state = decodeState(encodedState);
-      state = handleTurn(state);
-    } else {
-      state = initializeGame();
-    }
-  } else {
-    state = initializeGame();
-  }
-
-  const encodedState = encodeState(state);
+  const encodedState = Buffer.from(JSON.stringify(state)).toString('base64');
 
   return c.res({
     image: (
@@ -210,8 +191,8 @@ app.frame('/game', (c) => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          width: '1080px',
-          height: '1080px',
+          width: '100%',
+          height: '100%',
           backgroundColor: '#1a1a1a',
           color: 'white',
           padding: '40px'
