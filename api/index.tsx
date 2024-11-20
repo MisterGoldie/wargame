@@ -408,6 +408,6 @@ function getCardDisplay(card: Card): { path: string; label: string } {
   // Match the exact file structure: api/public/[filename]
   return {
     label,
-    path: `/api/public/${card.v}_of_${suitMap[card.s]}.png`  // Example: /api/public/2_of_diamonds.png
+    path: `public/${card.v}_of_${suitMap[card.s]}.png` // Example: /api/public/2_of_diamonds.png
   };
 }
