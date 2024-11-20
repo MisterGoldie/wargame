@@ -405,8 +405,9 @@ function getCardDisplay(card: Card): { path: string; label: string } {
   };
   
   const label = `${getCardLabel(card.v)} of ${suitMap[card.s]}`;
+  // Exact match to file structure in your public folder
   return {
     label,
-    path: `/public/${card.v}_of_${suitMap[card.s]}.png`
+    path: `/${card.v}_of_${suitMap[card.s]}.png`  // Example: /2_of_diamonds.png
   };
 }
