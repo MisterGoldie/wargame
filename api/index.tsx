@@ -284,7 +284,9 @@ app.frame('/game', async (c) => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#1a1a1a',
+        backgroundImage: 'url(https://bafybeidmy2f6x42tjkgtrsptnntcjulfehlvt3ddjoyjbieaz7sywohpxy.ipfs.w3s.link/Frame%2039%20(1).png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
         color: 'white',
         position: 'relative'
       }}>
@@ -292,6 +294,8 @@ app.frame('/game', async (c) => {
         <div style={{ 
           position: 'absolute',
           top: '40px',
+          left: '50%',
+          transform: 'translateX(-50%)',
           display: 'flex',
           alignItems: 'center',
           gap: '20px'
@@ -313,61 +317,72 @@ app.frame('/game', async (c) => {
           </div>
         </div>
 
-        {/* Card Count Display */}
-        <div style={{ 
+        {/* Game Content Container */}
+        <div style={{
           display: 'flex',
-          fontSize: '24px',
-          gap: '40px',
-          marginBottom: '20px'
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '20px'
         }}>
-          <div>Your Cards: {state.p.length}</div>
-          <div>CPU Cards: {state.c.length}</div>
-        </div>
-
-        {/* Card Display */}
-        {state.pc && state.cc ? (
+          {/* Card Count Display */}
           <div style={{ 
             display: 'flex',
-            gap: '40px',
-            alignItems: 'center'
+            fontSize: '24px',
+            gap: '40px'
           }}>
-            <img 
-              src={getCardDisplay(state.pc).path}
-              alt={getCardDisplay(state.pc).label}
-              style={{ width: '180px', height: 'auto' }}
-            />
-            <div style={{ fontSize: '36px' }}>VS</div>
-            <img 
-              src={getCardDisplay(state.cc).path}
-              alt={getCardDisplay(state.cc).label}
-              style={{ width: '180px', height: 'auto' }}
-            />
+            <div>Your Cards: {state.p.length}</div>
+            <div>CPU Cards: {state.c.length}</div>
           </div>
-        ) : (
-          <div style={{ fontSize: '24px' }}>
-            Click Draw Card to play!
-          </div>
-        )}
 
-        {/* Game Message */}
-        <div style={{ 
-          fontSize: '36px',
-          textAlign: 'center',
-          margin: '20px 0',
-          color: state.iw ? '#ff4444' : 'white'
-        }}>
-          {state.m}
-        </div>
+          {/* Card Display */}
+          {state.pc && state.cc ? (
+            <div style={{ 
+              display: 'flex',
+              gap: '40px',
+              alignItems: 'center'
+            }}>
+              <img 
+                src={getCardDisplay(state.pc).path}
+                alt={getCardDisplay(state.pc).label}
+                style={{ width: '180px', height: 'auto' }}
+              />
+              <div style={{ fontSize: '36px' }}>VS</div>
+              <img 
+                src={getCardDisplay(state.cc).path}
+                alt={getCardDisplay(state.cc).label}
+                style={{ width: '180px', height: 'auto' }}
+              />
+            </div>
+          ) : (
+            <div style={{ 
+              display: 'flex',
+              fontSize: '24px'
+            }}>
+              Click Draw Card to play!
+            </div>
+          )}
 
-        {/* War Alert */}
-        {state.iw && (
+          {/* Game Message */}
           <div style={{ 
-            fontSize: '64px',
-            color: '#ff4444'
+            display: 'flex',
+            fontSize: '36px',
+            textAlign: 'center',
+            color: state.iw ? '#ff4444' : 'white'
           }}>
-            WAR!
+            {state.m}
           </div>
-        )}
+
+          {/* War Alert */}
+          {state.iw && (
+            <div style={{ 
+              display: 'flex',
+              fontSize: '64px',
+              color: '#ff4444'
+            }}>
+              WAR!
+            </div>
+          )}
+        </div>
       </div>
     ),
     intents: [
