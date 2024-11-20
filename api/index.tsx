@@ -9,33 +9,47 @@ const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY as string;
 
 // Define types
 type Card = {
-  rank: number;
+  value: number;
   suit: string;
-  display: string;
+  label: string;
+  filename: string;
 };
 
 type GameState = {
   playerDeck: Card[];
-  cpuDeck: Card[];
+  computerDeck: Card[];
   playerCard: Card | null;
-  cpuCard: Card | null;
+  computerCard: Card | null;
   warPile: Card[];
+  message: string;
+  gameStatus: 'initial' | 'playing' | 'war' | 'ended';
   isWar: boolean;
-  gameOver: boolean;
 };
 
-// Game Logic Functions
-function createDeck(): Card[] {
-  const suits = ['♠️', '♣️', '♥️', '♦️'];
-  const ranks = Array.from({ length: 13 }, (_, i) => i + 2);
-  const displayRanks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-  
-  const deck: Card[] = [];
-  for (const suit of suits) {
-    ranks.forEach((rank, i) => {
-      deck.push({ rank, suit, display: displayRanks[i] + suit });
-    });
-  }
+function getCardLabel(value: number): string {
+  const specialCards: Record<number, string> = {
+    1: 'Ace',
+    11: 'Jack',
+    12: 'Queen',
+    13: 'King'
+  };
+  return specialCards[value] || value.toString();
+}
+
+function createShuffledDeck(): Card[] {
+  const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
+  const values = Array.from({ length: 13 }, (_, i) => i + 1);
+  const deck = suits.flatMap((suit) => 
+    values.map((value) => {
+      const label = getCardLabel(value);
+      return {
+        value,
+        suit,
+        label: `${label} of ${suit}`,
+        filename: `${value}_of_${suit}.png`
+      };
+    })
+  );
   return shuffle(deck);
 }
 
@@ -50,27 +64,27 @@ function shuffle<T>(array: T[]): T[] {
   return newArray;
 }
 
+function initializeGame(): GameState {
+  const deck = createShuffledDeck();
+  const midpoint = Math.floor(deck.length / 2);
+  return {
+    playerDeck: deck.slice(0, midpoint),
+    computerDeck: deck.slice(midpoint),
+    playerCard: null,
+    computerCard: null,
+    warPile: [],
+    message: 'Welcome to War! Draw a card to begin.',
+    gameStatus: 'initial',
+    isWar: false
+  };
+}
+
 function encodeState(state: GameState): string {
   return Buffer.from(JSON.stringify(state)).toString('base64');
 }
 
 function decodeState(encodedState: string): GameState {
   return JSON.parse(Buffer.from(encodedState, 'base64').toString());
-}
-
-function initializeGame(): GameState {
-  const deck = createDeck();
-  const midpoint = Math.floor(deck.length / 2);
-  
-  return {
-    playerDeck: deck.slice(0, midpoint),
-    cpuDeck: deck.slice(midpoint),
-    playerCard: null,
-    cpuCard: null,
-    warPile: [],
-    isWar: false,
-    gameOver: false
-  };
 }
 
 // Create Frog app instance
@@ -88,6 +102,53 @@ app.use(neynar({
   apiKey: NEYNAR_API_KEY,
   features: ['interactor']
 }));
+
+// Game Logic
+function handleTurn(state: GameState): GameState {
+  if (!state.isWar) {
+    state.playerCard = state.playerDeck.pop() || null;
+    state.computerCard = state.computerDeck.pop() || null;
+
+    if (state.playerCard && state.computerCard) {
+      if (state.playerCard.value === state.computerCard.value) {
+        state.isWar = true;
+        state.gameStatus = 'war';
+        state.warPile.push(state.playerCard, state.computerCard);
+        state.message = "It's WAR! Draw again for the war!";
+      } else {
+        const winner = state.playerCard.value > state.computerCard.value ? 'player' : 'computer';
+        if (winner === 'player') {
+          state.playerDeck.unshift(state.playerCard, state.computerCard);
+          state.message = `You win this round! (${state.playerCard.label} vs ${state.computerCard.label})`;
+        } else {
+          state.computerDeck.unshift(state.playerCard, state.computerCard);
+          state.message = `Computer wins this round! (${state.playerCard.label} vs ${state.computerCard.label})`;
+        }
+      }
+    }
+  } else {
+    // Handle war
+    const warCards: Card[] = [];
+    for (let i = 0; i < 3; i++) {
+      const playerWarCard = state.playerDeck.pop();
+      const computerWarCard = state.computerDeck.pop();
+      if (playerWarCard && computerWarCard) {
+        warCards.push(playerWarCard, computerWarCard);
+      }
+    }
+    state.warPile.push(...warCards);
+    state.isWar = false;
+    state.gameStatus = 'playing';
+  }
+
+  // Check for game over
+  if (state.playerDeck.length === 0 || state.computerDeck.length === 0) {
+    state.gameStatus = 'ended';
+    state.message = state.playerDeck.length === 0 ? 'Game Over! Computer Wins!' : 'Game Over! You Win!';
+  }
+
+  return state;
+}
 
 // Routes
 app.frame('/', (c) => {
@@ -109,8 +170,11 @@ app.frame('/', (c) => {
         <h1 style={{ fontSize: '72px', marginBottom: '40px' }}>
           War Card Game
         </h1>
-        <div style={{ fontSize: '36px', textAlign: 'center' }}>
-          Click Start to begin!
+        <div style={{ fontSize: '36px', textAlign: 'center', marginBottom: '40px' }}>
+          Classic card game of War!
+        </div>
+        <div style={{ fontSize: '24px', textAlign: 'center' }}>
+          Draw cards and compete against the computer.
         </div>
       </div>
     ),
@@ -123,57 +187,21 @@ app.frame('/', (c) => {
 app.frame('/game', (c) => {
   const { buttonValue } = c;
   let state: GameState;
-  
+
   if (buttonValue?.startsWith('draw:')) {
     const encodedState = buttonValue.split(':')[1];
     if (encodedState) {
       state = decodeState(encodedState);
+      state = handleTurn(state);
     } else {
       state = initializeGame();
     }
   } else {
     state = initializeGame();
   }
-  
-  if (buttonValue?.startsWith('draw:')) {
-    // Draw cards
-    if (!state.isWar) {
-      state.playerCard = state.playerDeck.pop() || null;
-      state.cpuCard = state.cpuDeck.pop() || null;
-      
-      if (state.playerCard && state.cpuCard) {
-        if (state.playerCard.rank === state.cpuCard.rank) {
-          state.isWar = true;
-          state.warPile.push(state.playerCard, state.cpuCard);
-        } else {
-          const winner = state.playerCard.rank > state.cpuCard.rank ? 'player' : 'cpu';
-          if (winner === 'player') {
-            state.playerDeck.unshift(state.playerCard, state.cpuCard);
-          } else {
-            state.cpuDeck.unshift(state.playerCard, state.cpuCard);
-          }
-        }
-      }
-    } else {
-      // Handle war
-      for (let i = 0; i < 3; i++) {
-        const playerWarCard = state.playerDeck.pop();
-        const cpuWarCard = state.cpuDeck.pop();
-        if (playerWarCard && cpuWarCard) {
-          state.warPile.push(playerWarCard, cpuWarCard);
-        }
-      }
-      state.isWar = false;
-    }
-    
-    // Check for game over
-    if (state.playerDeck.length === 0 || state.cpuDeck.length === 0) {
-      state.gameOver = true;
-    }
-  }
-  
+
   const encodedState = encodeState(state);
-  
+
   return c.res({
     image: (
       <div
@@ -190,23 +218,30 @@ app.frame('/game', (c) => {
         }}
       >
         <div style={{ fontSize: '24px', marginBottom: '20px' }}>
-          Player Cards: {state.playerDeck.length} | CPU Cards: {state.cpuDeck.length}
+          Your Cards: {state.playerDeck.length} | Computer Cards: {state.computerDeck.length}
         </div>
-        {state.playerCard && state.cpuCard && (
+        <div style={{ fontSize: '36px', marginBottom: '40px', textAlign: 'center' }}>
+          {state.message}
+        </div>
+        {state.playerCard && state.computerCard && (
           <div style={{ fontSize: '48px', marginBottom: '20px' }}>
-            {state.playerCard.display} vs {state.cpuCard.display}
+            {state.playerCard.label} vs {state.computerCard.label}
+          </div>
+        )}
+        {state.isWar && (
+          <div style={{ fontSize: '64px', color: '#ff4444', marginBottom: '20px' }}>
+            WAR!
           </div>
         )}
       </div>
     ),
     intents: [
-      state.gameOver 
+      state.gameStatus === 'ended'
         ? <Button action="/">Play Again</Button>
         : <Button value={`draw:${encodedState}`}>Draw Card</Button>
     ]
   });
 });
 
-// Export the handlers directly from the app instance
 export const GET = app.fetch;
 export const POST = app.fetch;
