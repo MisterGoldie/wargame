@@ -251,9 +251,10 @@ app.frame('/', (c) => {
 });
 
 app.frame('/game', async (c) => {
-  const { buttonValue, status, frameData } = c;
+  const { buttonValue, frameData } = c;
   const fid = frameData?.fid;
 
+  // Get user info
   let username = 'Player';
   let profileImage = null;
   
@@ -268,6 +269,22 @@ app.frame('/game', async (c) => {
     }
   }
 
+  // Handle game state
+  let state: GameState;
+  if (buttonValue?.startsWith('draw:')) {
+    const encodedState = buttonValue.split(':')[1];
+    if (encodedState) {
+      state = JSON.parse(Buffer.from(encodedState, 'base64').toString());
+      state = handleTurn(state);
+    } else {
+      state = initializeGame();
+    }
+  } else {
+    state = initializeGame();
+  }
+
+  const encodedState = Buffer.from(JSON.stringify(state)).toString('base64');
+
   return c.res({
     image: (
       <div style={{
@@ -277,46 +294,147 @@ app.frame('/game', async (c) => {
         justifyContent: 'center',
         width: '1080px',
         height: '1080px',
-        backgroundColor: '#1a1a1a',
+        backgroundImage: 'url(https://bafybeidmy2f6x42tjkgtrsptnntcjulfehlvt3ddjoyjbieaz7sywohpxy.ipfs.w3s.link/Frame%2039%20(1).png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
         color: 'white',
-        padding: '40px'
+        padding: '40px',
+        fontFamily: '"Silkscreen", sans-serif',
       }}>
-        {profileImage && (
-          <div style={{ marginBottom: '20px' }}>
+        {/* Profile and Score Section */}
+        <div style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+          marginBottom: '30px'
+        }}>
+          {profileImage ? (
             <img 
               src={profileImage}
               alt={username}
               style={{
-                width: '100px',
-                height: '100px',
+                width: '80px',
+                height: '80px',
                 borderRadius: '50%',
                 border: '3px solid white'
               }}
             />
+          ) : (
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              border: '3px solid white',
+              backgroundColor: '#303095',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px'
+            }}>
+              {username[0]}
+            </div>
+          )}
+          <div style={{ fontSize: '32px', fontWeight: 'bold' }}>
+            {username} vs CPU
           </div>
-        )}
-        <div style={{ fontSize: '24px', marginBottom: '20px' }}>
-          Playing as: {username}
         </div>
+
+        {/* Card Count Display */}
         <div style={{ 
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '20px'
+          justifyContent: 'space-between',
+          width: '80%',
+          fontSize: '28px',
+          marginBottom: '30px',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          padding: '20px',
+          borderRadius: '10px'
         }}>
+          <div>Your Cards: {state.playerDeck.length}</div>
+          <div>CPU Cards: {state.computerDeck.length}</div>
+        </div>
+
+        {/* Card Display */}
+        {state.playerCard && state.computerCard ? (
           <div style={{ 
             display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center'
+            gap: '60px',
+            alignItems: 'center',
+            marginBottom: '30px'
           }}>
-            <div style={{ fontSize: '36px', textAlign: 'center' }}>
-              Game Started!
-            </div>
+            <img 
+              src={state.playerCard.imagePath}
+              alt={state.playerCard.label}
+              style={{ 
+                width: '200px', 
+                height: 'auto',
+                transform: 'rotate(-5deg)',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
+              }}
+            />
+            <div style={{ 
+              fontSize: '48px',
+              fontWeight: 'bold',
+              color: '#FFD700'
+            }}>VS</div>
+            <img 
+              src={state.computerCard.imagePath}
+              alt={state.computerCard.label}
+              style={{ 
+                width: '200px', 
+                height: 'auto',
+                transform: 'rotate(5deg)',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
+              }}
+            />
           </div>
+        ) : (
+          <div style={{ 
+            fontSize: '36px',
+            marginBottom: '30px',
+            textAlign: 'center',
+            padding: '20px',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '10px'
+          }}>
+            Draw a card to begin!
+          </div>
+        )}
+
+        {/* Game Message */}
+        <div style={{ 
+          fontSize: '32px',
+          textAlign: 'center',
+          marginBottom: '20px',
+          padding: '20px',
+          backgroundColor: state.isWar ? 'rgba(255, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '10px',
+          width: '80%'
+        }}>
+          {state.message}
         </div>
+
+        {/* War Alert */}
+        {state.isWar && (
+          <div style={{ 
+            fontSize: '72px',
+            fontWeight: 'bold',
+            color: '#ff4444',
+            textShadow: '0 0 10px rgba(255,0,0,0.5)',
+            animation: 'pulse 1s infinite',
+            marginBottom: '20px'
+          }}>
+            WAR!
+          </div>
+        )}
       </div>
     ),
-    intents: [<Button action="/">Back to Start</Button>]
+    intents: [
+      state.gameStatus === 'ended' 
+        ? <Button action="/">Play Again</Button>
+        : <Button value={`draw:${encodedState}`}>Draw Card</Button>,
+      <Button action="/share">Your Stats</Button>
+    ]
   });
 });
 
