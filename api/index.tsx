@@ -8,12 +8,12 @@ import { neynar } from 'frog/middlewares'
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY as string;
 
 // Define types
-type Card = {
+interface Card {
   value: number;
   suit: string;
   label: string;
-  filename: string;
-};
+  imagePath: string;
+}
 
 type GameState = {
   playerDeck: Card[];
@@ -37,7 +37,7 @@ function getCardLabel(value: number): string {
 }
 
 function createShuffledDeck(): Card[] {
-  const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
+  const suits = ['clubs', 'diamonds', 'hearts', 'spades'];
   const values = Array.from({ length: 13 }, (_, i) => i + 1);
   const deck = suits.flatMap((suit) => 
     values.map((value) => {
@@ -46,7 +46,7 @@ function createShuffledDeck(): Card[] {
         value,
         suit,
         label: `${label} of ${suit}`,
-        filename: `${value}_of_${suit}.png`
+        imagePath: `/api/public/assets/cards/${value}_of_${suit}.png`
       };
     })
   );
@@ -224,8 +224,23 @@ app.frame('/game', (c) => {
           {state.message}
         </div>
         {state.playerCard && state.computerCard && (
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>
-            {state.playerCard.label} vs {state.computerCard.label}
+          <div style={{ 
+            display: 'flex', 
+            gap: '20px', 
+            marginBottom: '20px',
+            alignItems: 'center'
+          }}>
+            <img 
+              src={state.playerCard.imagePath} 
+              alt={state.playerCard.label}
+              style={{ width: '200px', height: 'auto' }}
+            />
+            <div style={{ fontSize: '36px', margin: '0 20px' }}>VS</div>
+            <img 
+              src={state.computerCard.imagePath} 
+              alt={state.computerCard.label}
+              style={{ width: '200px', height: 'auto' }}
+            />
           </div>
         )}
         {state.isWar && (
