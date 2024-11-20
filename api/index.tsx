@@ -407,6 +407,6 @@ function getCardDisplay(card: Card): { path: string; label: string } {
   const label = `${getCardLabel(card.v)} of ${suitMap[card.s]}`;
   return {
     label,
-    path: `/public/assets/cards/${card.v}_of_${suitMap[card.s]}.png`
+    path: `/assets/cards/${card.v}_of_${suitMap[card.s]}.png`
   };
 }
