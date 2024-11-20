@@ -1,10 +1,8 @@
 /** @jsxImportSource frog/jsx */
 
 import { Button, Frog } from 'frog'
-import { JSX } from 'frog/jsx';
 import type { NeynarVariables } from 'frog/middlewares'
 import { neynar } from 'frog/middlewares'
-import { gql, GraphQLClient } from "graphql-request";
 
 // Constants
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY as string;
@@ -347,11 +345,7 @@ app.frame('/game', async (c) => {
 export const GET = app.fetch;
 export const POST = app.fetch;
 
-// Add this helper function to get full card details for displayS
-/** @jsxImportSource frog/jsx */
-import { Child } from 'hono/jsx';
-
-// Update function signature to use Child return type
+// Move getCardSVG here, before it's used
 function getCardSVG(card: Card) {
   const suitSymbols: Record<string, string> = {
     'h': '♥',
