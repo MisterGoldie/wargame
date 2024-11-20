@@ -248,23 +248,16 @@ app.frame('/', (c) => {
 });
 
 app.frame('/game', async (c) => {
-  const { buttonValue, frameData } = c;
-  const fid = frameData?.fid;
-
+  const { buttonValue } = c;
   let state: GameState;
+
   try {
     if (buttonValue?.startsWith('draw:')) {
       const encodedState = buttonValue.split(':')[1];
-      if (encodedState) {
-        const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
-        console.log('Decoded state:', decodedState);
-        state = handleTurn(decodedState);
-      } else {
-        console.log('No encoded state found, initializing new game');
-        state = initializeGame();
-      }
+      state = encodedState 
+        ? handleTurn(JSON.parse(Buffer.from(encodedState, 'base64').toString()))
+        : initializeGame();
     } else {
-      console.log('No button value, initializing new game');
       state = initializeGame();
     }
   } catch (error) {
@@ -272,7 +265,10 @@ app.frame('/game', async (c) => {
     state = initializeGame();
   }
 
-  const encodedState = Buffer.from(JSON.stringify(state)).toString('base64');
+  // Don't encode state if game is over
+  const buttonAction = state.g === 'e' 
+    ? { action: '/' }
+    : { value: `draw:${Buffer.from(JSON.stringify(state)).toString('base64')}` };
 
   return c.res({
     image: (
@@ -286,67 +282,49 @@ app.frame('/game', async (c) => {
         color: 'white',
         backgroundImage: 'url("https://bafybeihn3ynsyzeacgbubyut5buhlb7duqro7wws64p5soffgr63dq2ecq.ipfs.w3s.link/Frame%202.png")',
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        padding: '40px'
+        backgroundPosition: 'center'
       }}>
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '20px',
+          gap: '40px',
           backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          padding: '30px',
-          borderRadius: '15px',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+          padding: '40px',
+          borderRadius: '15px'
         }}>
-          {/* Card Counts */}
-          <div style={{
-            display: 'flex',
-            gap: '40px',
-            fontSize: '24px'
-          }}>
-            <span>Your Cards: {state.p.length}</span>
-            <span>CPU Cards: {state.c.length}</span>
+          {/* Score */}
+          <div style={{ display: 'flex', gap: '40px', fontSize: '24px' }}>
+            <span>You: {state.p.length}</span>
+            <span>CPU: {state.c.length}</span>
           </div>
 
-          {/* Cards */}
-          {state.pc && state.cc && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '40px'
-            }}>
-              {getCardSVG(state.pc)}
-              <div style={{ fontSize: '36px' }}>VS</div>
-              {getCardSVG(state.cc)}
-            </div>
-          )}
+          {/* Active Cards */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '40px', minHeight: '260px' }}>
+            {state.pc && state.cc ? (
+              <>
+                {getCardSVG(state.pc)}
+                <div style={{ fontSize: '36px' }}>VS</div>
+                {getCardSVG(state.cc)}
+              </>
+            ) : (
+              <div style={{ fontSize: '24px' }}>Draw a card to begin!</div>
+            )}
+          </div>
 
           {/* Message */}
-          <div style={{
-            fontSize: '36px',
-            color: state.iw ? '#ff4444' : 'white',
-            textAlign: 'center'
-          }}>
-            {state.m}
-          </div>
-          
-          {state.iw && (
-            <div style={{ 
-              fontSize: '64px',
-              color: '#ff4444'
-            }}>
-              WAR!
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+            <div style={{ fontSize: '36px', color: state.iw ? '#ff4444' : 'white', textAlign: 'center' }}>
+              {state.m}
             </div>
-          )}
+            {state.iw && (
+              <div style={{ fontSize: '64px', color: '#ff4444' }}>WAR!</div>
+            )}
+          </div>
         </div>
       </div>
     ),
-    intents: [
-      state.g === 'e'
-        ? <Button action="/">Play Again</Button>
-        : <Button value={`draw:${encodedState}`}>Draw Card</Button>
-    ]
+    intents: [<Button {...buttonAction}>{state.g === 'e' ? 'Play Again' : 'Draw Card'}</Button>]
   });
 });
 
