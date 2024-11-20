@@ -278,26 +278,23 @@ app.frame('/game', async (c) => {
   return c.res({
     image: (
       <div style={{
-        width: '1080px',
-        height: '1080px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        width: '1080px',
+        height: '1080px',
         backgroundColor: '#1a1a1a',
         color: 'white',
-        position: 'relative'
+        padding: '40px'
       }}>
         {/* Profile Section */}
         <div style={{ 
-          position: 'absolute',
-          top: '40px',
-          left: 0,
-          right: 0,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '20px'
+          gap: '20px',
+          marginBottom: '40px'
         }}>
           {profileImage && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -311,23 +308,22 @@ app.frame('/game', async (c) => {
                   border: '2px solid white'
                 }}
               />
-              <div style={{ fontSize: '24px' }}>
-                {username} vs CPU
-              </div>
+              <div style={{ fontSize: '24px' }}>{username} vs CPU</div>
             </div>
           )}
         </div>
 
-        {/* Game Content */}
+        {/* Game Content with proper spacing */}
         <div style={{ 
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '20px'
         }}>
-          {/* Card Count Display */}
+          {/* Card Counts */}
           <div style={{ 
             display: 'flex',
+            justifyContent: 'center',
             gap: '40px'
           }}>
             <div style={{ fontSize: '24px' }}>Your Cards: {state.p.length}</div>
@@ -335,7 +331,12 @@ app.frame('/game', async (c) => {
           </div>
 
           {/* Card Display */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
+          <div style={{ 
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '40px'
+          }}>
             {state.pc && state.cc ? (
               <>
                 <img 
@@ -353,13 +354,11 @@ app.frame('/game', async (c) => {
                 />
               </>
             ) : (
-              <div style={{ fontSize: '24px' }}>
-                Click Draw Card to play!
-              </div>
+              <div style={{ fontSize: '24px' }}>Click Draw Card to play!</div>
             )}
           </div>
 
-          {/* Game Message */}
+          {/* Game Status */}
           <div style={{ 
             display: 'flex',
             flexDirection: 'column',
@@ -368,7 +367,8 @@ app.frame('/game', async (c) => {
           }}>
             <div style={{ 
               fontSize: '36px',
-              color: state.iw ? '#ff4444' : 'white'
+              color: state.iw ? '#ff4444' : 'white',
+              textAlign: 'center'
             }}>
               {state.m}
             </div>
@@ -407,6 +407,6 @@ function getCardDisplay(card: Card): { path: string; label: string } {
   const label = `${getCardLabel(card.v)} of ${suitMap[card.s]}`;
   return {
     label,
-    path: `/assets/cards/${card.v}_of_${suitMap[card.s]}.png`
+    path: `/api/public/assets/cards/${card.v}_of_${suitMap[card.s]}.png`
   };
 }
