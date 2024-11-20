@@ -6,6 +6,11 @@ import { neynar } from 'frog/middlewares'
 
 // Constants
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY as string;
+const AIRSTACK_API_URL = 'https://api.airstack.xyz/gql';
+const AIRSTACK_API_KEY = process.env.AIRSTACK_API_KEY as string;
+const AIRSTACK_API_KEY_SECONDARY = process.env.AIRSTACK_API_KEY_SECONDARY as string;
+const MOXIE_VESTING_API_URL = "https://api.studio.thegraph.com/query/23537/moxie_vesting_mainnet/version/latest";
+const MOXIE_API_URL = "https://api.studio.thegraph.com/query/23537/moxie_protocol_stats_mainnet/version/latest";
 
 // Define types
 interface Card {
