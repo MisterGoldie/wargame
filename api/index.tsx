@@ -283,16 +283,21 @@ app.frame('/game', async (c) => {
         justifyContent: 'center',
         width: '1080px',
         height: '1080px',
-        backgroundColor: '#1a1a1a',
         color: 'white',
-        backgroundImage: 'linear-gradient(to bottom right, #1a1a1a, #2a2a2a)',
+        backgroundImage: 'url("https://bafybeihn3ynsyzeacgbubyut5buhlb7duqro7wws64p5soffgr63dq2ecq.ipfs.w3s.link/Frame%202.png")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
         padding: '40px'
       }}>
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '20px'
+          gap: '20px',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          padding: '30px',
+          borderRadius: '15px',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
         }}>
           {/* Card Counts */}
           <div style={{
