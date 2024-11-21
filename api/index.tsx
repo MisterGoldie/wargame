@@ -265,21 +265,17 @@ app.frame('/game', async (c) => {
     state = initializeGame();
   }
 
-  // Get card display text
-  const getCardText = (card: Card) => {
-    const suitSymbols: { [key: string]: string } = { 'h': '♥', 'd': '♦', 'c': '♣', 's': '♠' };
-    return `${getCardLabel(card.v)}${suitSymbols[card.s]}`;
-  };
-
   const cardStyle = {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     width: '180px',
     height: '250px',
     backgroundColor: 'white',
     borderRadius: '15px',
-    fontSize: '48px',
+    border: '2px solid #000',
+    padding: '20px'
   };
 
   return c.res({
@@ -301,54 +297,71 @@ app.frame('/game', async (c) => {
           flexDirection: 'column',
           alignItems: 'center',
           gap: '40px',
-          padding: '40px',
           backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          padding: '40px',
           borderRadius: '15px'
         }}>
-          <div style={{ display: 'flex', gap: '40px', fontSize: '24px' }}>
-            <div>Your Cards: {state.p.length}</div>
-            <div>CPU Cards: {state.c.length}</div>
+          {/* Cards Counter */}
+          <div style={{
+            display: 'flex',
+            gap: '40px',
+            fontSize: '24px'
+          }}>
+            <span>Your Cards: {state.p.length}</span>
+            <span>CPU Cards: {state.c.length}</span>
           </div>
 
-          {state.pc && state.cc ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
-              <div style={{
-                ...cardStyle,
-                color: state.pc.s === 'h' || state.pc.s === 'd' ? '#ff0000' : '#000000'
-              }}>
-                {getCardText(state.pc)}
-              </div>
-              
-              <div style={{ fontSize: '36px', fontWeight: 'bold' }}>VS</div>
-              
-              <div style={{
-                ...cardStyle,
-                color: state.cc.s === 'h' || state.cc.s === 'd' ? '#ff0000' : '#000000'
-              }}>
-                {getCardText(state.cc)}
-              </div>
-            </div>
-          ) : (
-            <div style={{ 
-              fontSize: '24px',
-              height: '250px',
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              Draw a card to begin!
-            </div>
-          )}
+          {/* Game Area */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '40px',
+            minHeight: '260px'
+          }}>
+            {state.pc && state.cc ? (
+              <>
+                {/* Player Card */}
+                <div style={{
+                  ...cardStyle,
+                  color: state.pc.s === 'h' || state.pc.s === 'd' ? '#ff0000' : '#000000'
+                }}>
+                  <div style={{ fontSize: '32px' }}>{getCardLabel(state.pc.v)}</div>
+                  <div style={{ fontSize: '72px' }}>
+                    {state.pc.s === 'h' ? '♥' : state.pc.s === 'd' ? '♦' : state.pc.s === 'c' ? '♣' : '♠'}
+                  </div>
+                  <div style={{ fontSize: '32px', transform: 'rotate(180deg)' }}>{getCardLabel(state.pc.v)}</div>
+                </div>
 
+                <div style={{ fontSize: '36px', fontWeight: 'bold' }}>VS</div>
+
+                {/* CPU Card */}
+                <div style={{
+                  ...cardStyle,
+                  color: state.cc.s === 'h' || state.cc.s === 'd' ? '#ff0000' : '#000000'
+                }}>
+                  <div style={{ fontSize: '32px' }}>{getCardLabel(state.cc.v)}</div>
+                  <div style={{ fontSize: '72px' }}>
+                    {state.cc.s === 'h' ? '♥' : state.cc.s === 'd' ? '♦' : state.cc.s === 'c' ? '♣' : '♠'}
+                  </div>
+                  <div style={{ fontSize: '32px', transform: 'rotate(180deg)' }}>{getCardLabel(state.cc.v)}</div>
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: '24px' }}>Draw a card to begin!</div>
+            )}
+          </div>
+
+          {/* Message Area */}
           <div style={{
             fontSize: '36px',
-            textAlign: 'center',
-            color: state.iw ? '#ff4444' : 'white'
+            color: state.iw ? '#ff4444' : 'white',
+            textAlign: 'center'
           }}>
             {state.m}
           </div>
-
+          
           {state.iw && (
-            <div style={{
+            <div style={{ 
               fontSize: '64px',
               color: '#ff4444',
               fontWeight: 'bold'
