@@ -189,7 +189,7 @@ function handleTurn(state: GameState): GameState {
       }
     }
   } else {
-    // Handle war
+    // Handle WAR
     const warCards: Card[] = [];
     for (let i = 0; i < 3; i++) {
       const playerWarCard = newState.p.pop();
