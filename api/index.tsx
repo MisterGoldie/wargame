@@ -844,9 +844,9 @@ app.frame('/game', async (c) => {
           </div>
 
           {fanTokenData.ownsToken && (
-            <span style={styles.fanTokenIndicator}>
+            <div style={styles.fanTokenIndicator}>
               POD Fan Token Holder: {(fanTokenData.balance).toFixed(2)}
-            </span>
+            </div>
           )}
 
           <div style={styles.cardArea}>
