@@ -356,10 +356,10 @@ app.frame('/game', async (c) => {
     ),
     intents: [
       <Button 
-        action={state.w ? '/' : undefined}
-        value={state.w ? `draw:${Buffer.from(JSON.stringify(state)).toString('base64')}` : undefined}
+        action={state.p.length === 0 || state.c.length === 0 ? '/' : undefined}
+        value={state.p.length > 0 && state.c.length > 0 ? `draw:${Buffer.from(JSON.stringify(state)).toString('base64')}` : undefined}
       >
-        {state.w ? 'Play Again' : 'Draw Card'}
+        {state.p.length === 0 || state.c.length === 0 ? 'Play Again' : 'Draw Card'}
       </Button>
     ]
   });
