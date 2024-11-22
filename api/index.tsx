@@ -526,7 +526,8 @@ function handleTurn(state: GameState): GameState {
       victoryMessage: winner === 'p' 
         ? '🎉 EPIC WAR VICTORY! 🎉' 
         : '💔 DEFEATED IN BATTLE! 💔',
-      warPile: []
+      warPile: [],
+      messageColor: winner === 'p' ? '#4ADE80' : '#ff4444'
     };
 
     if (winner === 'p') {
