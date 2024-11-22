@@ -3,6 +3,7 @@
 import { Button, Frog } from 'frog'
 import type { NeynarVariables } from 'frog/middlewares'
 import { neynar } from 'frog/middlewares'
+import { GraphQLClient } from 'graphql-request'
 
 // Constants
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY as string;
@@ -138,6 +139,38 @@ async function getUserProfilePicture(fid: string): Promise<string | null> {
     return null;
   }
 }
+
+// Add new types
+interface TokenHolding {
+  // Add token holding properties
+  address: string;
+  balance: string;
+  // Add other properties as needed
+}
+
+// Add the API functions
+async function getVestingContractAddress(beneficiaryAddresses: string[]): Promise<string | null> {
+  const graphQLClient = new GraphQLClient(MOXIE_VESTING_API_URL);
+  try {
+    // Implement vesting contract query
+    return null; // Placeholder
+  } catch (error) {
+    console.error('Error fetching vesting contract:', error);
+    return null;
+  }
+}
+
+async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | null> {
+  const graphQLClient = new GraphQLClient(MOXIE_API_URL);
+  try {
+    // Implement fan tokens query
+    return null; // Placeholder
+  } catch (error) {
+    console.error('Error fetching fan tokens:', error);
+    return null;
+  }
+}
+
 // Create Frog app instance
 export const app = new Frog<{ Variables: NeynarVariables }>({
   basePath: '/api',
@@ -317,8 +350,14 @@ function GameCard({ card }: { card: Card }) {
 
 // Game frame handler
 app.frame('/game', async (c) => {
+  const { buttonValue, frameData } = c;
+  const fid = frameData?.fid;
+
+  let username = 'Player';
+  if (fid) {
+    username = await getUsername(fid.toString());
+  }
   let state: GameState;
-  const { buttonValue } = c;
 
   if (buttonValue?.startsWith('draw:')) {
     try {
@@ -417,7 +456,7 @@ app.frame('/game', async (c) => {
       <div style={styles.root}>
         <div style={styles.gamePanel}>
           <div style={styles.counter}>
-            <span>Your Cards: {state.p.length}</span>
+            <span>{username}'s Cards: {state.p.length}</span>
             <span>CPU Cards: {state.c.length}</span>
           </div>
 
@@ -460,6 +499,42 @@ app.frame('/game', async (c) => {
       >
         {isGameOver ? 'Play Again' : state.w ? 'Draw War Cards' : 'Draw Card'}
       </Button>
+    ]
+  });
+});
+
+// Add share route
+app.frame('/share', async (c) => {
+  const { frameData } = c;
+  const fid = frameData?.fid;
+
+  let profileImage: string | null = null;
+  if (fid) {
+    profileImage = await getUserProfilePicture(fid.toString());
+  }
+
+  return c.res({
+    image: (
+      <div style={{ backgroundColor: 'white', padding: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {profileImage && (
+            <img 
+              src={profileImage} 
+              alt="Profile" 
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '32px',
+                marginBottom: '20px'
+              }}
+            />
+          )}
+          {/* Add share screen content */}
+        </div>
+      </div>
+    ),
+    intents: [
+      <Button action="/game">Play Again</Button>
     ]
   });
 });
