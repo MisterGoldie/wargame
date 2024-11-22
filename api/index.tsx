@@ -145,6 +145,7 @@ type GameState = {
   warPile?: Card[];
   victoryMessage?: string;
   lastDrawTime?: number;
+  fanTokenData?: { ownsToken: boolean; balance: number };
 };
 
 function getCardLabel(value: number): string {
@@ -673,102 +674,9 @@ app.frame('/game', async (c) => {
     }
   }
 
-  // Get fan token data
-  let fanTokenData = { ownsToken: false, balance: 0 };
-  if (fid) {
-    try {
-      fanTokenData = await checkFanTokenOwnership(fid.toString());
-    } catch (error) {
-      console.error('Error checking fan token ownership:', error);
-    }
-  }
-
-  // Add fan token indicator to the game panel if user owns tokens
-  const styles = {
-    // Root container - Dark background (#1a1a1a)
-    root: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '1080px',
-      height: '1080px',
-      backgroundColor: '#1a1a1a', // Dark theme background
-      color: 'white', // Default text color
-      padding: '40px'
-    },
-
-    // Game panel - Semi-transparent black overlay
-    gamePanel: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.7)', // Transparent black overlay
-      padding: '40px',
-      borderRadius: '10px',
-      gap: '40px'
-    },
-
-    // Card counter section - White text
-    counter: {
-      display: 'flex',
-      gap: '40px',
-      fontSize: '24px',
-      color: 'white' // Counter text color
-    },
-
-    // Card display area
-    cardArea: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '40px'
-    },
-
-    // VS text - White
-    vsText: {
-      fontSize: '36px',
-      fontWeight: 'bold',
-      color: 'white'
-    },
-
-    // Message area - White text (Red for war)
-    messageArea: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '20px'
-    },
-
-    // Game message text
-    gameMessage: (isWar: boolean) => ({
-      fontSize: '32px',
-      color: isWar ? '#ff4444' : 'white' // Red for war, otherwise white
-    }),
-
-    // War indicator - Red text (#ff4444)
-    warIndicator: {
-      fontSize: '48px',
-      color: '#ff4444', // War text color
-      fontWeight: 'bold'
-    },
-
-    victoryMessage: {
-      fontSize: '48px',
-      color: '#4ADE80', // Victory green
-      fontWeight: 'bold',
-      textAlign: 'center',
-      marginTop: '20px'
-    },
-
-    fanTokenIndicator: {
-      fontSize: '18px',
-      color: '#4ADE80',
-      marginTop: '10px',
-      textAlign: 'center'
-    }
-  };
-
   let state: GameState;
+  let fanTokenData = { ownsToken: false, balance: 0 };
+
   if (buttonValue?.startsWith('draw:')) {
     try {
       const encodedState = buttonValue.split(':')[1];
@@ -778,8 +686,8 @@ app.frame('/game', async (c) => {
       if (isOnCooldown(decodedState.lastDrawTime)) {
         return c.res({
           image: (
-            <div style={styles.root}>
-              <div style={styles.gamePanel}>
+            <div style={{ backgroundColor: 'white', padding: '20px' }}>
+              <div style={{ backgroundColor: '#f0f0f0', padding: '10px', borderRadius: '5px' }}>
                 <span style={{
                   fontSize: '24px',
                   color: '#ff4444',
@@ -791,9 +699,7 @@ app.frame('/game', async (c) => {
             </div>
           ),
           intents: [
-            <Button 
-              value={`draw:${buttonValue.split(':')[1]}`}
-            >
+            <Button value={`draw:${buttonValue.split(':')[1]}`}>
               Draw Card
             </Button>
           ]
@@ -803,13 +709,25 @@ app.frame('/game', async (c) => {
       // Add timestamp to state before processing turn
       decodedState.lastDrawTime = Date.now();
       state = handleTurn(decodedState);
+      // Use the stored fanTokenData from the state
+      fanTokenData = decodedState.fanTokenData || { ownsToken: false, balance: 0 };
     } catch (error) {
       console.error('State processing error:', error);
       state = initializeGame();
     }
   } else {
+    // Only check fan token ownership when starting a new game
+    if (fid) {
+      try {
+        console.log('Checking fan token ownership for new game...');
+        fanTokenData = await checkFanTokenOwnership(fid.toString());
+      } catch (error) {
+        console.error('Error checking fan token ownership:', error);
+      }
+    }
     state = initializeGame();
-    state.lastDrawTime = Date.now();
+    // Store the fanTokenData in the game state
+    state.fanTokenData = fanTokenData;
   }
 
   const isGameOver = !state.p.length || !state.c.length;
@@ -827,24 +745,23 @@ app.frame('/game', async (c) => {
 
   return c.res({
     image: (
-      <div style={styles.root}>
-        <div style={styles.gamePanel}>
-          <div style={styles.counter}>
+      <div style={{ /* Assuming styles.root is not defined */ }}>
+        <div style={{ /* Assuming styles.gamePanel is not defined */ }}>
+          <div style={{ /* Assuming styles.counter is not defined */ }}>
             <span>{username}'s Cards: {state.p.length}</span>
             <span>CPU Cards: {state.c.length}</span>
           </div>
-
           {fanTokenData.ownsToken && (
-            <span style={styles.fanTokenIndicator}>
+            <span style={{ /* Assuming styles.fanTokenIndicator is not defined */ }}>
               POD Fan Token Holder: {(fanTokenData.balance).toFixed(2)}
             </span>
           )}
 
-          <div style={styles.cardArea}>
+          <div style={{ /* Assuming styles.cardArea is not defined */ }}>
             {state.pc && state.cc ? (
               <>
                 <GameCard card={state.pc} />
-                <span style={styles.vsText}>VS</span>
+                <span style={{ /* Assuming styles.vsText is not defined */ }}>VS</span>
                 <GameCard card={state.cc} />
               </>
             ) : (
@@ -852,7 +769,7 @@ app.frame('/game', async (c) => {
             )}
           </div>
 
-          <div style={styles.messageArea}>
+          <div style={{ /* Assuming styles.messageArea is not defined */ }}>
             <div style={{
               display: 'flex',
               flexDirection: 'column',
