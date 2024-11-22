@@ -302,15 +302,15 @@ async function checkFanTokenOwnership(fid: string): Promise<FanTokenData> {
       return { ownsToken: false, balance: 0 };
     }
 
-    // Calculate total balance across all holdings
-    const totalBalance = fanTokenData.reduce((sum, token) => {
-      return sum + parseFloat(token.balance);
-    }, 0);
+    const podToken = fanTokenData[0]; // Since we're already filtering for thepod in getOwnedFanTokens
+    if (podToken && parseFloat(podToken.balance) > 0) {
+      // Convert from wei (18 decimals) to regular number
+      const balance = parseFloat(podToken.balance) / 1e18;
+      console.log('Calculated balance:', balance);
+      return { ownsToken: true, balance };
+    }
 
-    return {
-      ownsToken: totalBalance > 0,
-      balance: totalBalance
-    };
+    return { ownsToken: false, balance: 0 };
   } catch (error) {
     console.error('Error checking fan token ownership:', error);
     return { ownsToken: false, balance: 0 };
@@ -626,7 +626,7 @@ app.frame('/game', async (c) => {
 
           {fanTokenData.ownsToken && (
             <span style={styles.fanTokenIndicator}>
-              🎮 Fan Token Holder: {fanTokenData.balance.toFixed(2)}
+              POD Fan Token Holder: {(fanTokenData.balance).toFixed(2)}
             </span>
           )}
 
