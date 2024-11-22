@@ -248,14 +248,18 @@ app.frame('/', (c) => {
 });
 
 app.frame('/game', async (c) => {
+  console.log('Button value:', c.buttonValue);
+  
   const { buttonValue } = c;
   let state: GameState;
 
   if (buttonValue?.startsWith('draw:')) {
     try {
       const encodedState = buttonValue.split(':')[1];
+      const decodedState = Buffer.from(encodedState, 'base64').toString();
+      console.log('Decoded state:', decodedState);
       state = encodedState 
-        ? handleTurn(JSON.parse(Buffer.from(encodedState, 'base64').toString()))
+        ? handleTurn(JSON.parse(decodedState))
         : initializeGame();
     } catch (error) {
       console.error('Error handling game state:', error);
@@ -264,6 +268,7 @@ app.frame('/game', async (c) => {
   } else {
     state = initializeGame();
   }
+  console.log('Current state:', state);
 
   const cardStyle = {
     display: 'flex',
