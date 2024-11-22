@@ -260,7 +260,7 @@ async function getFarcasterAddressesFromFID(fid: string): Promise<string[]> {
 
   const query = gql`
     query GetAddresses($identity: Identity!) {
-      Wallet: Socials(
+      Socials(
         input: {
           filter: { dappName: { _eq: farcaster }, identity: { _eq: $identity } }
           blockchain: ethereum
@@ -269,29 +269,6 @@ async function getFarcasterAddressesFromFID(fid: string): Promise<string[]> {
         Social {
           userAddress
           userAssociatedAddresses
-          profileName
-        }
-      }
-      Poap: Poaps(
-        input: {
-          filter: { owner: { _eq: $identity } }
-        }
-      ) {
-        Poap {
-          owner {
-            addresses
-          }
-        }
-      }
-      TokenBalances: TokenBalances(
-        input: {
-          filter: { owner: { _eq: $identity } }
-        }
-      ) {
-        TokenBalance {
-          owner {
-            addresses
-          }
         }
       }
     }
@@ -305,33 +282,20 @@ async function getFarcasterAddressesFromFID(fid: string): Promise<string[]> {
     const data = await graphQLClient.request<any>(query, variables);
     console.log('Airstack API response:', JSON.stringify(data, null, 2));
 
-    // Collect addresses from all sources
+    // Collect unique addresses
     const addresses = new Set<string>();
 
-    // Add addresses from Farcaster Social
-    if (data.Wallet?.Social?.[0]) {
-      const social = data.Wallet.Social[0];
-      if (social.userAddress) addresses.add(social.userAddress.toLowerCase());
+    if (data?.Socials?.Social?.[0]) {
+      const social = data.Socials.Social[0];
+      if (social.userAddress) {
+        addresses.add(social.userAddress.toLowerCase());
+      }
       if (social.userAssociatedAddresses) {
         social.userAssociatedAddresses.forEach((addr: string) => 
           addresses.add(addr.toLowerCase())
         );
       }
     }
-
-    // Add addresses from POAPs
-    data.Poap?.Poap?.forEach((poap: any) => {
-      poap?.owner?.addresses?.forEach((addr: string) => 
-        addresses.add(addr.toLowerCase())
-      );
-    });
-
-    // Add addresses from Token Balances
-    data.TokenBalances?.TokenBalance?.forEach((token: any) => {
-      token?.owner?.addresses?.forEach((addr: string) => 
-        addresses.add(addr.toLowerCase())
-      );
-    });
 
     const addressArray = Array.from(addresses);
     console.log('Found addresses:', addressArray);
