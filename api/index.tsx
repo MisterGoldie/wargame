@@ -148,6 +148,7 @@ type GameState = {
   w: boolean;
   warPile?: Card[];
   victoryMessage?: string;
+  lastDrawTime?: number;
 };
 
 function getCardLabel(value: number): string {
@@ -186,7 +187,8 @@ function initializeGame(): GameState {
     pc: null,                      // playerCard
     cc: null,                      // computerCard
     m: 'Welcome to War! Draw a card to begin.',  // message
-    w: false                       // isWar
+    w: false,                       // isWar
+    lastDrawTime: Date.now()
   };
 }
 
@@ -662,14 +664,28 @@ function GameCard({ card }: { card: Card }) {
 
 // Game frame handler
 app.frame('/game', async (c) => {
-  const { buttonValue, frameData } = c;
-  const fid = frameData?.fid;
+  const { buttonValue } = c;
+  const fid = c.frameData?.fid;
+  
+  // Get username
+  let username = 'Player';
+  if (fid) {
+    try {
+      username = await getUsername(fid.toString());
+    } catch (error) {
+      console.error('Error fetching username:', error);
+    }
+  }
 
-  // Get username and check fan token ownership in parallel
-  const [username, fanTokenData] = await Promise.all([
-    fid ? getUsername(fid.toString()) : Promise.resolve('Player'),
-    fid ? checkFanTokenOwnership(fid.toString()) : Promise.resolve({ ownsToken: false, balance: 0 })
-  ]);
+  // Get fan token data
+  let fanTokenData = { ownsToken: false, balance: 0 };
+  if (fid) {
+    try {
+      fanTokenData = await checkFanTokenOwnership(fid.toString());
+    } catch (error) {
+      console.error('Error checking fan token ownership:', error);
+    }
+  }
 
   // Add fan token indicator to the game panel if user owns tokens
   const styles = {
@@ -760,27 +776,56 @@ app.frame('/game', async (c) => {
   if (buttonValue?.startsWith('draw:')) {
     try {
       const encodedState = buttonValue.split(':')[1];
-      state = handleTurn(JSON.parse(Buffer.from(encodedState, 'base64').toString()));
+      const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
+      
+      // Check if we're on cooldown
+      if (isOnCooldown(decodedState.lastDrawTime)) {
+        return c.res({
+          image: (
+            <div style={styles.root}>
+              <div style={styles.gamePanel}>
+                <span style={{
+                  fontSize: '24px',
+                  color: '#ff4444',
+                  textAlign: 'center'
+                }}>
+                  Please wait a moment before drawing again...
+                </span>
+              </div>
+            </div>
+          ),
+          intents: [
+            <Button 
+              value={`draw:${buttonValue.split(':')[1]}`}
+            >
+              Draw Card
+            </Button>
+          ]
+        });
+      }
+
+      // Add timestamp to state before processing turn
+      decodedState.lastDrawTime = Date.now();
+      state = handleTurn(decodedState);
     } catch (error) {
       console.error('State processing error:', error);
       state = initializeGame();
     }
   } else {
     state = initializeGame();
+    state.lastDrawTime = Date.now();
   }
 
   const isGameOver = !state.p.length || !state.c.length;
 
-  if (isGameOver) {
+  if (isGameOver && fid) {
     const result = state.p.length > 0 ? 'win' : 'loss';
-    if (fid) {
-      try {
-        await updateGameStats(fid.toString(), result);
-        const stats = await getGameStats(fid.toString());
-        console.log(`Updated stats for FID ${fid}:`, stats);
-      } catch (error) {
-        console.error('Error updating game stats:', error);
-      }
+    try {
+      await updateGameStats(fid.toString(), result);
+      const stats = await getGameStats(fid.toString());
+      console.log(`Updated stats for FID ${fid}:`, stats);
+    } catch (error) {
+      console.error('Error updating game stats:', error);
     }
   }
 
@@ -901,3 +946,10 @@ app.frame('/share', async (c) => {
 
 export const GET = app.fetch;
 export const POST = app.fetch;
+
+function isOnCooldown(lastDrawTime: number | undefined): boolean {
+  if (!lastDrawTime) return false;
+  const cooldownPeriod = 1000; // 1 second cooldown
+  const currentTime = Date.now();
+  return currentTime - lastDrawTime < cooldownPeriod;
+}
