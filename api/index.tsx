@@ -4,6 +4,123 @@ import { Button, Frog } from 'frog'
 import type { NeynarVariables } from 'frog/middlewares'
 import { neynar } from 'frog/middlewares'
 import { GraphQLClient, gql } from 'graphql-request'
+import admin from 'firebase-admin';
+
+// Firebase initialization
+let db: admin.firestore.Firestore | null = null;
+let initializationError: Error | null = null;
+
+try {
+  console.log('Starting Firebase initialization...');
+  
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  console.log('Environment variables loaded:');
+  console.log('Project ID:', projectId);
+  console.log('Client Email:', clientEmail);
+  console.log('Private Key exists:', !!privateKey);
+
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error('Missing Firebase configuration environment variables');
+  }
+
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId,
+        clientEmail,
+        privateKey: privateKey.replace(/\\n/g, '\n'),
+      }),
+    });
+    console.log('Firebase Admin SDK initialized successfully');
+  } else {
+    console.log('Firebase app already initialized');
+  }
+
+  db = admin.firestore();
+  console.log('Firestore instance created successfully');
+} catch (error) {
+  console.error('Error in Firebase initialization:', error);
+  if (error instanceof Error) {
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    initializationError = error;
+  }
+  db = null;
+}
+
+const getDb = () => {
+  if (db) {
+    return db;
+  }
+  if (initializationError) {
+    console.error('Firestore initialization failed earlier:', initializationError);
+    throw initializationError;
+  }
+  throw new Error('Firestore is not initialized and no initialization error was caught');
+};
+
+// Add helper functions for game stats
+interface GameStats {
+  wins: number;
+  losses: number;
+  ties: number;
+  gamesPlayed: number;
+}
+
+async function updateGameStats(fid: string, result: 'win' | 'loss' | 'tie'): Promise<void> {
+  try {
+    const firestore = getDb();
+    const statsRef = firestore.collection('warGameStats').doc(fid);
+    
+    await firestore.runTransaction(async (transaction) => {
+      const doc = await transaction.get(statsRef);
+      const currentStats = doc.exists ? doc.data() as GameStats : {
+        wins: 0,
+        losses: 0,
+        ties: 0,
+        gamesPlayed: 0
+      };
+
+      const newStats = {
+        ...currentStats,
+        [result === 'win' ? 'wins' : result === 'loss' ? 'losses' : 'ties']: currentStats[result === 'win' ? 'wins' : result === 'loss' ? 'losses' : 'ties'] + 1,
+        gamesPlayed: currentStats.gamesPlayed + 1
+      };
+
+      transaction.set(statsRef, newStats);
+    });
+
+    console.log(`Updated game stats for FID ${fid}:`, result);
+  } catch (error) {
+    console.error('Error updating game stats:', error);
+    throw error;
+  }
+}
+
+async function getGameStats(fid: string): Promise<GameStats> {
+  try {
+    const firestore = getDb();
+    const statsDoc = await firestore.collection('warGameStats').doc(fid).get();
+    
+    if (!statsDoc.exists) {
+      return {
+        wins: 0,
+        losses: 0,
+        ties: 0,
+        gamesPlayed: 0
+      };
+    }
+
+    return statsDoc.data() as GameStats;
+  } catch (error) {
+    console.error('Error fetching game stats:', error);
+    throw error;
+  }
+}
 
 // Constants
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY as string;
@@ -651,6 +768,19 @@ app.frame('/game', async (c) => {
   }
 
   const isGameOver = !state.p.length || !state.c.length;
+
+  if (isGameOver) {
+    const result = state.p.length > 0 ? 'win' : 'loss';
+    if (fid) {
+      try {
+        await updateGameStats(fid.toString(), result);
+        const stats = await getGameStats(fid.toString());
+        console.log(`Updated stats for FID ${fid}:`, stats);
+      } catch (error) {
+        console.error('Error updating game stats:', error);
+      }
+    }
+  }
 
   return c.res({
     image: (

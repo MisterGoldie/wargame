@@ -8,6 +8,7 @@
     "deploy": "vercel"
   },
   "dependencies": {
+    "firebase-admin": "^13.0.1",
     "frog": "latest",
     "graphql": "^16.9.0",
     "graphql-request": "^7.1.2",
