@@ -230,25 +230,29 @@ app.frame('/', (c) => {
 });
 
 // Card component
-function Card({ card }: { card: Card }) {
+const CardStyle = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  backgroundColor: 'white',
+  width: '120px',
+  height: '180px',
+  borderRadius: '10px',
+  padding: '20px',
+} as const;
+
+function GameCard({ card }: { card: Card }) {
   return (
     <div style={{
-      width: '120px',
-      height: '180px',
-      backgroundColor: 'white',
-      borderRadius: '10px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '10px',
+      ...CardStyle,
       color: card.s === '♥' || card.s === '♦' ? '#ff0000' : '#000000'
     }}>
-      <div style={{ fontSize: '24px' }}>{getCardLabel(card.v)}</div>
-      <div style={{ fontSize: '48px' }}>{card.s}</div>
-      <div style={{ fontSize: '24px', transform: 'rotate(180deg)' }}>
+      <span style={{ fontSize: '24px' }}>{getCardLabel(card.v)}</span>
+      <span style={{ fontSize: '48px' }}>{card.s}</span>
+      <span style={{ fontSize: '24px', transform: 'rotate(180deg)' }}>
         {getCardLabel(card.v)}
-      </div>
+      </span>
     </div>
   );
 }
@@ -270,80 +274,87 @@ app.frame('/game', async (c) => {
     state = initializeGame();
   }
 
-  const gameView = (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '20px',
-      padding: '20px',
-      backgroundColor: 'rgba(0,0,0,0.8)',
-      borderRadius: '10px',
-      width: '100%',
-      maxWidth: '800px'
-    }}>
-      <div style={{ fontSize: '24px' }}>
-        Your Cards: {state.p.length} | CPU Cards: {state.c.length}
-      </div>
-
-      {state.pc && state.cc ? (
-        <div style={{
-          display: 'flex',
-          gap: '40px',
-          alignItems: 'center'
-        }}>
-          <Card card={state.pc} />
-          <div style={{ fontSize: '36px', fontWeight: 'bold' }}>VS</div>
-          <Card card={state.cc} />
-        </div>
-      ) : null}
-
-      <div style={{
-        fontSize: '32px',
-        color: state.w ? '#ff4444' : 'white'
-      }}>
-        {state.m}
-      </div>
-
-      {state.w && (
-        <div style={{
-          fontSize: '48px',
-          color: '#ff4444',
-          fontWeight: 'bold'
-        }}>
-          WAR!
-        </div>
-      )}
-    </div>
-  );
+  const isGameOver = !state.p.length || !state.c.length;
 
   return c.res({
     image: (
       <div style={{
-        width: '1080px',
-        height: '1080px',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        width: '1080px',
+        height: '1080px',
         backgroundColor: '#1a1a1a',
-        color: 'white'
+        color: 'white',
+        padding: '40px'
       }}>
-        {gameView}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          padding: '40px',
+          borderRadius: '10px',
+          gap: '40px'
+        }}>
+          <div style={{
+            display: 'flex',
+            gap: '40px',
+            fontSize: '24px'
+          }}>
+            <span>Your Cards: {state.p.length}</span>
+            <span>CPU Cards: {state.c.length}</span>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '40px'
+          }}>
+            {state.pc && state.cc ? (
+              <>
+                <GameCard card={state.pc} />
+                <span style={{ fontSize: '36px', fontWeight: 'bold' }}>VS</span>
+                <GameCard card={state.cc} />
+              </>
+            ) : (
+              <span style={{ fontSize: '24px' }}>Draw a card to begin!</span>
+            )}
+          </div>
+
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px'
+          }}>
+            <span style={{
+              fontSize: '32px',
+              color: state.w ? '#ff4444' : 'white'
+            }}>
+              {state.m}
+            </span>
+
+            {state.w && (
+              <span style={{
+                fontSize: '48px',
+                color: '#ff4444',
+                fontWeight: 'bold'
+              }}>
+                WAR!
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     ),
     intents: [
       <Button 
-        value={
-          !state.p.length || !state.c.length 
-            ? undefined 
-            : `draw:${Buffer.from(JSON.stringify(state)).toString('base64')}`
-        }
+        value={!isGameOver ? `draw:${Buffer.from(JSON.stringify(state)).toString('base64')}` : undefined}
+        action={isGameOver ? '/' : undefined}
       >
-        {
-          !state.p.length || !state.c.length 
-            ? 'Play Again' 
-            : 'Draw Card'
-        }
+        {isGameOver ? 'Play Again' : state.w ? 'Draw War Cards' : 'Draw Card'}
       </Button>
     ]
   });
