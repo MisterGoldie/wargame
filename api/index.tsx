@@ -200,6 +200,7 @@ function handleTurn(state: GameState): GameState {
       ...state,
       pc, cc,
       w: false,
+      m: '',
       victoryMessage: winner === 'p' 
         ? `You won the WAR with ${getCardLabel(pc.v)}!` 
         : `CPU won the WAR with ${getCardLabel(cc.v)}!`,
@@ -225,49 +226,32 @@ function handleTurn(state: GameState): GameState {
 
   const pc = state.p.pop()!;
   const cc = state.c.pop()!;
-  const cards = [pc, cc];
 
   if (pc.v === cc.v) {
-    // War scenario
-    if (state.p.length < 4 || state.c.length < 4) {
-      const winner = state.p.length > state.c.length ? 'p' : 'c';
-      return {
-        ...state,
-        m: `Not enough cards for war! ${winner === 'p' ? 'You win!' : 'Computer wins!'}`,
-        w: false
-      };
-    }
-
-    // Draw face-down cards
-    const pWarCards = state.p.splice(-3).map(card => ({ ...card, hidden: true }));
-    const cWarCards = state.c.splice(-3).map(card => ({ ...card, hidden: true }));
-    
     return {
       ...state,
       pc, cc,
       w: true,
-      warPile: [...cards, ...pWarCards, ...cWarCards],
+      warPile: [pc, cc],
       m: "WAR! 3 cards face down, next card decides the winner!"
     };
   }
 
-  // Normal or war resolution
   const winner = pc.v > cc.v ? 'p' : 'c';
   const newState = {
     ...state,
     pc, cc,
-    w: false
+    w: false,
+    m: winner === 'p' 
+      ? `You win with ${getCardLabel(pc.v)}!` 
+      : `Computer wins with ${getCardLabel(cc.v)}!`
   };
 
-  const allCards = [...cards, ...(state.warPile || [])];
   if (winner === 'p') {
-    newState.p.unshift(...allCards);
-    newState.m = `You win with ${getCardLabel(pc.v)} vs ${getCardLabel(cc.v)}!`;
+    newState.p.unshift(pc, cc);
   } else {
-    newState.c.unshift(...allCards);
-    newState.m = `Computer wins with ${getCardLabel(cc.v)} vs ${getCardLabel(pc.v)}!`;
+    newState.c.unshift(pc, cc);
   }
-  newState.warPile = [];
 
   return newState;
 }
