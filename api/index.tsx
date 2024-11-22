@@ -514,26 +514,30 @@ function handleTurn(state: GameState): GameState {
   const cards = [pc, cc];
 
   // War resolution
-  if (state.w) {
-    const allCards = [...cards, ...(state.warPile || [])];
+  if (state.w && state.warPile) {
     const winner = pc.v > cc.v ? 'p' : 'c';
-    
     const newState = {
       ...state,
       pc, cc,
       w: false,
-      m: '', // Clear the war message
-      victoryMessage: winner === 'p' 
+      m: winner === 'p' 
         ? `You won the WAR with ${getCardLabel(pc.v)}!` 
-        : `CPU won the WAR with ${getCardLabel(cc.v)}!`,
+        : `Computer won the WAR with ${getCardLabel(cc.v)}!`,
+      victoryMessage: winner === 'p' 
+        ? '🎉 EPIC WAR VICTORY! 🎉' 
+        : '💔 DEFEATED IN BATTLE! 💔',
       warPile: []
     };
 
-    // Winner takes all cards
+    // Add 4 cards to winner, subtract 4 from loser
     if (winner === 'p') {
-      newState.p.unshift(...allCards);
+      // Player wins war
+      newState.p = [...newState.p.slice(0, newState.p.length), ...cards, ...state.warPile];
+      newState.c = newState.c.slice(0, newState.c.length - 4); // Remove 4 cards from CPU
     } else {
-      newState.c.unshift(...allCards);
+      // CPU wins war
+      newState.c = [...newState.c.slice(0, newState.c.length), ...cards, ...state.warPile];
+      newState.p = newState.p.slice(0, newState.p.length - 4); // Remove 4 cards from player
     }
 
     return newState;
