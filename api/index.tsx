@@ -3,7 +3,7 @@
 import { Button, Frog } from 'frog'
 import type { NeynarVariables } from 'frog/middlewares'
 import { neynar } from 'frog/middlewares'
-import { GraphQLClient } from 'graphql-request'
+import { GraphQLClient, gql } from 'graphql-request'
 
 // Constants
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY as string;
@@ -151,11 +151,32 @@ interface TokenHolding {
 // Add the API functions
 async function getVestingContractAddress(beneficiaryAddresses: string[]): Promise<string | null> {
   const graphQLClient = new GraphQLClient(MOXIE_VESTING_API_URL);
+
+  const query = gql`
+    query MyQuery($beneficiaries: [Bytes!]) {
+      tokenLockWallets(where: {beneficiary_in: $beneficiaries}) {
+        address: id
+        beneficiary
+      }
+    }
+  `;
+
+  const variables = {
+    beneficiaries: beneficiaryAddresses.map(address => address.toLowerCase())
+  };
+
   try {
-    // Implement vesting contract query
-    return null; // Placeholder
+    const data = await graphQLClient.request<any>(query, variables);
+    console.log('Vesting contract data:', JSON.stringify(data, null, 2));
+
+    if (data.tokenLockWallets && data.tokenLockWallets.length > 0) {
+      return data.tokenLockWallets[0].address;
+    } else {
+      console.log(`No vesting contract found for addresses: ${beneficiaryAddresses.join(', ')}`);
+      return null;
+    }
   } catch (error) {
-    console.error('Error fetching vesting contract:', error);
+    console.error('Error fetching vesting contract address:', error);
     return null;
   }
 }
@@ -168,6 +189,83 @@ async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | 
   } catch (error) {
     console.error('Error fetching fan tokens:', error);
     return null;
+  }
+}
+
+// Add new interfaces
+interface FanTokenData {
+  ownsToken: boolean;
+  balance: number;
+}
+
+// Add function to get Farcaster addresses from FID
+async function getFarcasterAddressesFromFID(fid: string): Promise<string[]> {
+  const query = `
+    query GetAddresses($fid: String!) {
+      Socials(
+        input: {filter: {dappName: {_eq: farcaster}, userId: {_eq: $fid}}, blockchain: ethereum}
+      ) {
+        Social {
+          userAssociatedAddresses
+        }
+      }
+    }
+  `;
+
+  try {
+    const response = await fetch(AIRSTACK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': AIRSTACK_API_KEY,
+      },
+      body: JSON.stringify({ query, variables: { fid } }),
+    });
+
+    const data = await response.json();
+    return data?.data?.Socials?.Social?.[0]?.userAssociatedAddresses || [];
+  } catch (error) {
+    console.error('Error fetching addresses:', error);
+    return [];
+  }
+}
+
+// Add fan token ownership check function
+async function checkFanTokenOwnership(fid: string): Promise<FanTokenData> {
+  try {
+    const addresses = await getFarcasterAddressesFromFID(fid);
+    console.log('Found addresses:', addresses);
+
+    if (!addresses || addresses.length === 0) {
+      return { ownsToken: false, balance: 0 };
+    }
+
+    // Get vesting contract address if it exists
+    const vestingAddress = await getVestingContractAddress(addresses);
+    console.log('Vesting contract address:', vestingAddress);
+
+    // Add vesting address to the addresses array if it exists
+    const allAddresses = vestingAddress 
+      ? [...addresses, vestingAddress]
+      : addresses;
+
+    const fanTokenData = await getOwnedFanTokens(allAddresses);
+    if (!fanTokenData || fanTokenData.length === 0) {
+      return { ownsToken: false, balance: 0 };
+    }
+
+    // Calculate total balance across all holdings
+    const totalBalance = fanTokenData.reduce((sum, token) => {
+      return sum + parseFloat(token.balance);
+    }, 0);
+
+    return {
+      ownsToken: totalBalance > 0,
+      balance: totalBalance
+    };
+  } catch (error) {
+    console.error('Error checking fan token ownership:', error);
+    return { ownsToken: false, balance: 0 };
   }
 }
 
@@ -363,27 +461,13 @@ app.frame('/game', async (c) => {
   const { buttonValue, frameData } = c;
   const fid = frameData?.fid;
 
-  let username = 'Player';
-  if (fid) {
-    username = await getUsername(fid.toString());
-  }
-  let state: GameState;
+  // Get username and check fan token ownership in parallel
+  const [username, fanTokenData] = await Promise.all([
+    fid ? getUsername(fid.toString()) : Promise.resolve('Player'),
+    fid ? checkFanTokenOwnership(fid.toString()) : Promise.resolve({ ownsToken: false, balance: 0 })
+  ]);
 
-  if (buttonValue?.startsWith('draw:')) {
-    try {
-      const encodedState = buttonValue.split(':')[1];
-      state = handleTurn(JSON.parse(Buffer.from(encodedState, 'base64').toString()));
-    } catch (error) {
-      console.error('State processing error:', error);
-      state = initializeGame();
-    }
-  } else {
-    state = initializeGame();
-  }
-
-  const isGameOver = !state.p.length || !state.c.length;
-
-  // Style definitions with comments
+  // Add fan token indicator to the game panel if user owns tokens
   const styles = {
     // Root container - Dark background (#1a1a1a)
     root: {
@@ -458,8 +542,30 @@ app.frame('/game', async (c) => {
       fontWeight: 'bold',
       textAlign: 'center',
       marginTop: '20px'
+    },
+
+    fanTokenIndicator: {
+      fontSize: '18px',
+      color: '#4ADE80',
+      marginTop: '10px',
+      textAlign: 'center'
     }
   };
+
+  let state: GameState;
+  if (buttonValue?.startsWith('draw:')) {
+    try {
+      const encodedState = buttonValue.split(':')[1];
+      state = handleTurn(JSON.parse(Buffer.from(encodedState, 'base64').toString()));
+    } catch (error) {
+      console.error('State processing error:', error);
+      state = initializeGame();
+    }
+  } else {
+    state = initializeGame();
+  }
+
+  const isGameOver = !state.p.length || !state.c.length;
 
   return c.res({
     image: (
@@ -469,6 +575,12 @@ app.frame('/game', async (c) => {
             <span>{username}'s Cards: {state.p.length}</span>
             <span>CPU Cards: {state.c.length}</span>
           </div>
+
+          {fanTokenData.ownsToken && (
+            <span style={styles.fanTokenIndicator}>
+              🎮 Fan Token Holder: {fanTokenData.balance.toFixed(2)}
+            </span>
+          )}
 
           <div style={styles.cardArea}>
             {state.pc && state.cc ? (
