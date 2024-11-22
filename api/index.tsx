@@ -881,7 +881,8 @@ app.frame('/game', async (c) => {
             }}>
               <span style={{
                 fontSize: '32px',
-                color: state.w ? '#ff4444' : 'white',
+                color: state.w ? '#ff4444' : 
+                      (state.m.includes('won the WAR') && state.m.includes('You')) ? '#4ADE80' : 'white',
                 textAlign: 'center'
               }}>
                 {state.m}
