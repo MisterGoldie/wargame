@@ -191,31 +191,7 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
-  if (state.w) {
-    const pc = state.p.pop()!;
-    const cc = state.c.pop()!;
-    const winner = pc.v > cc.v ? 'p' : 'c';
-    const warCards = state.warPile || [];
-    const newState = {
-      ...state,
-      pc, cc,
-      w: false,
-      m: '',
-      victoryMessage: winner === 'p' 
-        ? `You won the WAR with ${getCardLabel(pc.v)}!` 
-        : `CPU won the WAR with ${getCardLabel(cc.v)}!`,
-      warPile: []
-    };
-
-    if (winner === 'p') {
-      newState.p.unshift(pc, cc, ...warCards);
-    } else {
-      newState.c.unshift(pc, cc, ...warCards);
-    }
-
-    return newState;
-  }
-
+  // Game over check
   if (!state.p.length || !state.c.length) {
     return {
       ...state,
@@ -226,33 +202,83 @@ function handleTurn(state: GameState): GameState {
 
   const pc = state.p.pop()!;
   const cc = state.c.pop()!;
+  const cards = [pc, cc];
 
+  // War resolution
+  if (state.w) {
+    const allCards = [...cards, ...(state.warPile || [])];
+    const winner = pc.v > cc.v ? 'p' : 'c';
+    
+    const newState = {
+      ...state,
+      pc, cc,
+      w: false,
+      m: '', // Clear the war message
+      victoryMessage: winner === 'p' 
+        ? `You won the WAR with ${getCardLabel(pc.v)}!` 
+        : `CPU won the WAR with ${getCardLabel(cc.v)}!`,
+      warPile: []
+    };
+
+    // Winner takes all cards
+    if (winner === 'p') {
+      newState.p.unshift(...allCards);
+    } else {
+      newState.c.unshift(...allCards);
+    }
+
+    return newState;
+  }
+
+  // Check for new war
   if (pc.v === cc.v) {
+    // Check if enough cards for war
+    if (state.p.length < 3 || state.c.length < 3) {
+      const winner = state.p.length > state.c.length ? 'p' : 'c';
+      return {
+        ...state,
+        pc, cc,
+        w: false,
+        m: `Not enough cards for war! ${winner === 'p' ? 'You win!' : 'Computer wins!'}`,
+        victoryMessage: undefined
+      };
+    }
+
+    // Draw face-down cards
+    const pWarCards = state.p.splice(-3);
+    const cWarCards = state.c.splice(-3);
+    
     return {
       ...state,
       pc, cc,
       w: true,
-      warPile: [pc, cc],
-      m: "WAR! 3 cards face down, next card decides the winner!"
+      warPile: [
+        ...cards,
+        ...pWarCards.map(c => ({...c, hidden: true})),
+        ...cWarCards.map(c => ({...c, hidden: true}))
+      ],
+      m: "WAR! 3 cards face down, next card decides the winner!",
+      victoryMessage: undefined // Clear any previous victory message
     };
   }
 
+  // Normal turn resolution
   const winner = pc.v > cc.v ? 'p' : 'c';
   const newState = {
     ...state,
     pc, cc,
     w: false,
-    m: winner === 'p' 
-      ? `You win with ${getCardLabel(pc.v)}!` 
-      : `Computer wins with ${getCardLabel(cc.v)}!`
+    victoryMessage: undefined // Clear any previous victory message
   };
 
   if (winner === 'p') {
-    newState.p.unshift(pc, cc);
+    newState.p.unshift(...cards);
+    newState.m = `You win with ${getCardLabel(pc.v)}!`;
   } else {
-    newState.c.unshift(pc, cc);
+    newState.c.unshift(...cards);
+    newState.m = `Computer wins with ${getCardLabel(cc.v)}!`;
   }
-
+  
   return newState;
 }
 
