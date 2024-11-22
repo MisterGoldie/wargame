@@ -809,7 +809,7 @@ app.frame('/game', async (c) => {
         });
       }
 
-      // Add timestamp to state before processing turn
+      // Add timestamp to state before processing turns
       decodedState.lastDrawTime = Date.now();
       state = handleTurn(decodedState);
     } catch (error) {
