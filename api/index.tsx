@@ -27,6 +27,7 @@ type GameState = {
   m: string;
   w: boolean;
   warPile?: Card[];
+  victoryMessage?: string;
 };
 
 function getCardLabel(value: number): string {
@@ -157,6 +158,30 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
+  if (state.w) {
+    const pc = state.p.pop()!;
+    const cc = state.c.pop()!;
+    const winner = pc.v > cc.v ? 'p' : 'c';
+    const warCards = state.warPile || [];
+    const newState = {
+      ...state,
+      pc, cc,
+      w: false,
+      victoryMessage: winner === 'p' 
+        ? `You won the WAR with ${getCardLabel(pc.v)}!` 
+        : `CPU won the WAR with ${getCardLabel(cc.v)}!`,
+      warPile: []
+    };
+
+    if (winner === 'p') {
+      newState.p.unshift(pc, cc, ...warCards);
+    } else {
+      newState.c.unshift(pc, cc, ...warCards);
+    }
+
+    return newState;
+  }
+
   if (!state.p.length || !state.c.length) {
     return {
       ...state,
@@ -376,6 +401,14 @@ app.frame('/game', async (c) => {
       fontSize: '48px',
       color: '#ff4444', // War text color
       fontWeight: 'bold'
+    },
+
+    victoryMessage: {
+      fontSize: '48px',
+      color: '#4ADE80', // Victory green
+      fontWeight: 'bold',
+      textAlign: 'center',
+      marginTop: '20px'
     }
   };
 
@@ -408,6 +441,12 @@ app.frame('/game', async (c) => {
             {state.w && (
               <span style={styles.warIndicator}>
                 WAR!
+              </span>
+            )}
+
+            {state.victoryMessage && (
+              <span style={styles.victoryMessage}>
+                {state.victoryMessage}
               </span>
             )}
           </div>
