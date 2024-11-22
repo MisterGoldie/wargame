@@ -506,16 +506,14 @@ function handleTurn(state: GameState): GameState {
     };
   }
 
+  // Draw current cards
   const pc = state.p.pop()!;
   const cc = state.c.pop()!;
   const currentCards = [pc, cc];
 
   // War resolution
   if (state.w && state.warPile) {
-    // Add current cards to war pile
-    const allCards = [...currentCards, ...state.warPile];
     const winner = pc.v > cc.v ? 'p' : 'c';
-    
     const newState = {
       ...state,
       pc, cc,
@@ -523,17 +521,17 @@ function handleTurn(state: GameState): GameState {
       m: winner === 'p' 
         ? `You won the WAR with ${getCardLabel(pc.v)}!` 
         : `Computer won the WAR with ${getCardLabel(cc.v)}!`,
-      warPile: [],
       victoryMessage: winner === 'p' 
-        ? '🎉 Victory in WAR! 🎉' 
-        : '💔 Defeated in WAR! 💔'
+        ? '🎉 EPIC WAR VICTORY! 🎉' 
+        : '💔 DEFEATED IN BATTLE! 💔',
+      warPile: []  // Clear war pile after resolution
     };
 
-    // Winner takes all cards
+    // Add all cards to winner's deck
     if (winner === 'p') {
-      newState.p.unshift(...allCards);
+      newState.p.unshift(...currentCards, ...state.warPile);
     } else {
-      newState.c.unshift(...allCards);
+      newState.c.unshift(...currentCards, ...state.warPile);
     }
 
     return newState;
@@ -552,18 +550,19 @@ function handleTurn(state: GameState): GameState {
       };
     }
 
-    // Draw 3 face-down cards from each player
-    const pWarCards = state.p.splice(-3);
-    const cWarCards = state.c.splice(-3);
-    
+    // Draw 3 face-down cards from each player for war
+    const pWarCards = state.p.splice(-3).map(card => ({...card, hidden: true}));
+    const cWarCards = state.c.splice(-3).map(card => ({...card, hidden: true}));
+
+    // Add current cards and face-down cards to war pile
     return {
       ...state,
       pc, cc,
       w: true,
       warPile: [
-        ...currentCards,               // Current tied cards
-        ...pWarCards,                  // Player's 3 face-down cards
-        ...cWarCards                   // CPU's 3 face-down cards
+        ...currentCards,   // The tied cards
+        ...pWarCards,      // Player's 3 face-down cards
+        ...cWarCards       // CPU's 3 face-down cards
       ],
       m: "WAR! 3 cards face down, next card decides the winner!"
     };
@@ -571,19 +570,21 @@ function handleTurn(state: GameState): GameState {
 
   // Normal turn resolution
   const winner = pc.v > cc.v ? 'p' : 'c';
-  if (winner === 'p') {
-    state.p.unshift(...currentCards);
-    state.m = `You win with ${getCardLabel(pc.v)}!`;
-  } else {
-    state.c.unshift(...currentCards);
-    state.m = `Computer wins with ${getCardLabel(cc.v)}!`;
-  }
-  
-  return {
+  const newState = {
     ...state,
     pc, cc,
     w: false
   };
+
+  if (winner === 'p') {
+    newState.p.unshift(...currentCards);
+    newState.m = `You win with ${getCardLabel(pc.v)}!`;
+  } else {
+    newState.c.unshift(...currentCards);
+    newState.m = `Computer wins with ${getCardLabel(cc.v)}!`;
+  }
+
+  return newState;
 }
 
 // Add the compression function
