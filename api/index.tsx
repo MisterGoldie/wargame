@@ -149,6 +149,8 @@ type GameState = {
   warPile?: Card[];
   victoryMessage?: string;
   lastDrawTime?: number;
+  username?: string;
+  fanTokenData?: { ownsToken: boolean; balance: number };
 };
 
 function getCardLabel(value: number): string {
@@ -667,29 +669,12 @@ app.frame('/game', async (c) => {
   const { buttonValue } = c;
   const fid = c.frameData?.fid;
   
-  // Get username
+  // Get username and check tokens only if there's no buttonValue (new game)
   let username = 'Player';
-  if (fid) {
-    try {
-      username = await getUsername(fid.toString());
-    } catch (error) {
-      console.error('Error fetching username:', error);
-    }
-  }
-
-  // Get fan token data
   let fanTokenData = { ownsToken: false, balance: 0 };
-  if (fid) {
-    try {
-      fanTokenData = await checkFanTokenOwnership(fid.toString());
-    } catch (error) {
-      console.error('Error checking fan token ownership:', error);
-    }
-  }
 
-  // Add fan token indicator to the game panel if user owns tokens
+  // Define styles first
   const styles = {
-    // Root container - Dark background (#1a1a1a)
     root: {
       display: 'flex',
       flexDirection: 'column',
@@ -697,73 +682,57 @@ app.frame('/game', async (c) => {
       justifyContent: 'center',
       width: '1080px',
       height: '1080px',
-      backgroundColor: '#1a1a1a', // Dark theme background
-      color: 'white', // Default text color
+      backgroundColor: '#1a1a1a',
+      color: 'white',
       padding: '40px'
     },
-
-    // Game panel - Semi-transparent black overlay
     gamePanel: {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.7)', // Transparent black overlay
+      backgroundColor: 'rgba(0,0,0,0.7)',
       padding: '40px',
       borderRadius: '10px',
       gap: '40px'
     },
-
-    // Card counter section - White text
     counter: {
       display: 'flex',
       gap: '40px',
       fontSize: '24px',
-      color: 'white' // Counter text color
+      color: 'white'
     },
-
-    // Card display area
     cardArea: {
       display: 'flex',
       alignItems: 'center',
       gap: '40px'
     },
-
-    // VS text - White
     vsText: {
       fontSize: '36px',
       fontWeight: 'bold',
       color: 'white'
     },
-
-    // Message area - White text (Red for war)
     messageArea: {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       gap: '20px'
     },
-
-    // Game message text
     gameMessage: (isWar: boolean) => ({
       fontSize: '32px',
-      color: isWar ? '#ff4444' : 'white' // Red for war, otherwise white
+      color: isWar ? '#ff4444' : 'white'
     }),
-
-    // War indicator - Red text (#ff4444)
     warIndicator: {
       fontSize: '48px',
-      color: '#ff4444', // War text color
+      color: '#ff4444',
       fontWeight: 'bold'
     },
-
     victoryMessage: {
       fontSize: '48px',
-      color: '#4ADE80', // Victory green
+      color: '#4ADE80',
       fontWeight: 'bold',
       textAlign: 'center',
       marginTop: '20px'
     },
-
     fanTokenIndicator: {
       fontSize: '18px',
       color: '#4ADE80',
@@ -772,13 +741,36 @@ app.frame('/game', async (c) => {
     }
   };
 
+  if (!buttonValue && fid) {
+    try {
+      // Do initial checks in parallel
+      const [usernameResult, tokenData] = await Promise.all([
+        getUsername(fid.toString()),
+        checkFanTokenOwnership(fid.toString())
+      ]);
+      username = usernameResult;
+      fanTokenData = tokenData;
+    } catch (error) {
+      console.error('Error during initial game setup:', error);
+    }
+  } else if (buttonValue?.startsWith('draw:')) {
+    // Reuse the username from state but don't check tokens again
+    try {
+      const encodedState = buttonValue.split(':')[1];
+      const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
+      username = decodedState.username || 'Player';
+      fanTokenData = decodedState.fanTokenData || { ownsToken: false, balance: 0 };
+    } catch (error) {
+      console.error('Error decoding state:', error);
+    }
+  }
+
   let state: GameState;
   if (buttonValue?.startsWith('draw:')) {
     try {
       const encodedState = buttonValue.split(':')[1];
       const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
       
-      // Check if we're on cooldown
       if (isOnCooldown(decodedState.lastDrawTime)) {
         return c.res({
           image: (
@@ -804,16 +796,17 @@ app.frame('/game', async (c) => {
         });
       }
 
-      // Add timestamp to state before processing turn
       decodedState.lastDrawTime = Date.now();
       state = handleTurn(decodedState);
+      // Add username and fanTokenData to state for next turn
+      state.username = username;
+      state.fanTokenData = fanTokenData;
     } catch (error) {
       console.error('State processing error:', error);
-      state = initializeGame();
+      state = { ...initializeGame(), username, fanTokenData };
     }
   } else {
-    state = initializeGame();
-    state.lastDrawTime = Date.now();
+    state = { ...initializeGame(), username, fanTokenData };
   }
 
   const isGameOver = !state.p.length || !state.c.length;
