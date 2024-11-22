@@ -232,7 +232,12 @@ async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | 
     const data = await graphQLClient.request<PortfolioResponse>(query, variables);
     console.log('Fan token data:', JSON.stringify(data, null, 2));
     
-    return data.users?.[0]?.portfolio || null;
+    // Filter for only the /thepod token
+    const podTokens = data.users?.[0]?.portfolio?.filter(token => 
+      token.subjectToken.symbol === "cid:thepod"
+    ) || null;
+
+    return podTokens;
   } catch (error) {
     console.error('Error fetching fan tokens:', error);
     return null;
