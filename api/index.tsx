@@ -746,7 +746,7 @@ app.frame('/game', async (c) => {
 
       decodedState.lastDrawTime = Date.now();
       state = handleTurn(decodedState);
-      // Add username and fanTokenData to state for next turn
+      // Add username and fanTokenData to state for next turns
       state.username = username;
       state.fanTokenData = fanTokenData;
     } catch (error) {
