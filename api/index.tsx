@@ -6,61 +6,57 @@ import { neynar } from 'frog/middlewares'
 import { GraphQLClient, gql } from 'graphql-request'
 import admin from 'firebase-admin';
 
-// Firebase initialization
-let db: admin.firestore.Firestore | null = null;
-let initializationError: Error | null = null;
+// Remove the global variables and simplify the initialization
+function initializeFirebase() {
+  try {
+    console.log('Starting Firebase initialization...');
+    
+    const projectId = process.env.FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-try {
-  console.log('Starting Firebase initialization...');
-  
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    console.log('Environment variables loaded:');
+    console.log('Project ID:', projectId);
+    console.log('Client Email:', clientEmail);
+    console.log('Private Key exists:', !!privateKey);
 
-  console.log('Environment variables loaded:');
-  console.log('Project ID:', projectId);
-  console.log('Client Email:', clientEmail);
-  console.log('Private Key exists:', !!privateKey);
+    if (!projectId || !clientEmail || !privateKey) {
+      throw new Error('Missing Firebase configuration environment variables');
+    }
 
-  if (!projectId || !clientEmail || !privateKey) {
-    throw new Error('Missing Firebase configuration environment variables');
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId,
+          clientEmail,
+          privateKey: privateKey.replace(/\\n/g, '\n'),
+        }),
+      });
+      console.log('Firebase Admin SDK initialized successfully');
+    } else {
+      console.log('Firebase app already initialized');
+    }
+
+    return admin.firestore();
+  } catch (error) {
+    console.error('Error in Firebase initialization:', error);
+    if (error instanceof Error) {
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    throw error;
   }
-
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId,
-        clientEmail,
-        privateKey: privateKey.replace(/\\n/g, '\n'),
-      }),
-    });
-    console.log('Firebase Admin SDK initialized successfully');
-  } else {
-    console.log('Firebase app already initialized');
-  }
-
-  db = admin.firestore();
-  console.log('Firestore instance created successfully');
-} catch (error) {
-  console.error('Error in Firebase initialization:', error);
-  if (error instanceof Error) {
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    initializationError = error;
-  }
-  db = null;
 }
 
+// Simplified getDb function
 const getDb = () => {
-  if (db) {
-    return db;
+  try {
+    return initializeFirebase();
+  } catch (error) {
+    console.error('Firestore initialization failed:', error);
+    throw error;
   }
-  if (initializationError) {
-    console.error('Firestore initialization failed earlier:', initializationError);
-    throw initializationError;
-  }
-  throw new Error('Firestore is not initialized and no initialization error was caught');
 };
 
 // Add helper functions for game stats
@@ -689,90 +685,85 @@ app.frame('/game', async (c) => {
 
   // Add fan token indicator to the game panel if user owns tokens
   const styles = {
+    // Root container - Dark background (#1a1a1a)
     root: {
-      width: '100%',
-      height: '100%',
-      backgroundColor: '#000000',
       display: 'flex',
-      justifyContent: 'center',
+      flexDirection: 'column',
       alignItems: 'center',
+      justifyContent: 'center',
+      width: '1080px',
+      height: '1080px',
+      backgroundColor: '#1a1a1a', // Dark theme background
+      color: 'white', // Default text color
       padding: '40px'
     },
 
+    // Game panel - Semi-transparent black overlay
     gamePanel: {
-      width: '90%',
-      maxWidth: '900px',
-      backgroundColor: '#1a1a1a',
-      borderRadius: '20px',
-      padding: '40px',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: '30px'
+      backgroundColor: 'rgba(0,0,0,0.7)', // Transparent black overlay
+      padding: '40px',
+      borderRadius: '10px',
+      gap: '40px'
     },
 
+    // Card counter section - White text
     counter: {
-      width: '100%',
       display: 'flex',
-      justifyContent: 'space-between',
-      fontSize: '32px',
-      color: 'white',
-      marginBottom: '20px'
+      gap: '40px',
+      fontSize: '24px',
+      color: 'white' // Counter text color
     },
 
+    // Card display area
     cardArea: {
       display: 'flex',
       alignItems: 'center',
-      gap: '40px',
-      marginTop: '30px',
-      marginBottom: '30px'
+      gap: '40px'
     },
 
-    card: {
-      width: '200px',
-      height: '280px',
-      backgroundColor: 'white',
-      borderRadius: '15px',
+    // VS text - White
+    vsText: {
+      fontSize: '36px',
+      fontWeight: 'bold',
+      color: 'white'
+    },
+
+    // Message area - White text (Red for war)
+    messageArea: {
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'center',
       alignItems: 'center',
-      fontSize: '48px',
-      fontWeight: 'bold',
-      border: '3px solid #333'
+      gap: '20px'
     },
 
-    vsText: {
+    // Game message text
+    gameMessage: (isWar: boolean) => ({
+      fontSize: '32px',
+      color: isWar ? '#ff4444' : 'white' // Red for war, otherwise white
+    }),
+
+    // War indicator - Red text (#ff4444)
+    warIndicator: {
       fontSize: '48px',
-      color: 'white',
+      color: '#ff4444', // War text color
       fontWeight: 'bold'
     },
 
-    messageArea: {
-      width: '100%',
-      textAlign: 'center',
-      marginTop: '30px'
-    },
-
-    warText: {
-      fontSize: '64px',
-      color: '#ff4444',
-      fontWeight: 'bold',
-      textAlign: 'center'
-    },
-
     victoryMessage: {
-      fontSize: '56px',
-      color: '#4ADE80',
+      fontSize: '48px',
+      color: '#4ADE80', // Victory green
       fontWeight: 'bold',
       textAlign: 'center',
-      marginTop: '30px'
+      marginTop: '20px'
     },
 
     fanTokenIndicator: {
-      fontSize: '24px',
+      fontSize: '18px',
       color: '#4ADE80',
-      marginTop: '15px',
+      marginTop: '10px',
       textAlign: 'center'
     }
   };
@@ -790,7 +781,7 @@ app.frame('/game', async (c) => {
             <div style={styles.root}>
               <div style={styles.gamePanel}>
                 <span style={{
-                  fontSize: '32px',
+                  fontSize: '24px',
                   color: '#ff4444',
                   textAlign: 'center'
                 }}>
@@ -809,7 +800,7 @@ app.frame('/game', async (c) => {
         });
       }
 
-      // Add timestamp to state before processing turns
+      // Add timestamp to state before processing turn
       decodedState.lastDrawTime = Date.now();
       state = handleTurn(decodedState);
     } catch (error) {
@@ -824,8 +815,8 @@ app.frame('/game', async (c) => {
   const isGameOver = !state.p.length || !state.c.length;
 
   if (isGameOver && fid) {
-    const result = state.p.length > 0 ? 'win' : 'loss';
     try {
+      const result = state.p.length > 0 ? 'win' : 'loss';
       await updateGameStats(fid.toString(), result);
       const stats = await getGameStats(fid.toString());
       console.log(`Updated stats for FID ${fid}:`, stats);
@@ -844,9 +835,9 @@ app.frame('/game', async (c) => {
           </div>
 
           {fanTokenData.ownsToken && (
-            <div style={styles.fanTokenIndicator}>
+            <span style={styles.fanTokenIndicator}>
               POD Fan Token Holder: {(fanTokenData.balance).toFixed(2)}
-            </div>
+            </span>
           )}
 
           <div style={styles.cardArea}>
@@ -857,7 +848,7 @@ app.frame('/game', async (c) => {
                 <GameCard card={state.cc} />
               </>
             ) : (
-              <span style={{ fontSize: '32px', color: 'white' }}>Draw a card to begin!</span>
+              <span style={{ fontSize: '24px', color: 'white' }}>Draw a card to begin!</span>
             )}
           </div>
 
@@ -869,7 +860,7 @@ app.frame('/game', async (c) => {
               gap: '20px'
             }}>
               <span style={{
-                fontSize: '40px',
+                fontSize: '32px',
                 color: state.w ? '#ff4444' : 'white',
                 textAlign: 'center'
               }}>
@@ -878,7 +869,7 @@ app.frame('/game', async (c) => {
 
               {state.w && (
                 <span style={{
-                  fontSize: '64px',
+                  fontSize: '48px',
                   color: '#ff4444',
                   fontWeight: 'bold',
                   textAlign: 'center'
@@ -889,7 +880,7 @@ app.frame('/game', async (c) => {
 
               {state.victoryMessage && (
                 <span style={{
-                  fontSize: '56px',
+                  fontSize: '48px',
                   color: '#4ADE80',
                   fontWeight: 'bold',
                   textAlign: 'center'
