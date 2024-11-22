@@ -72,8 +72,23 @@ function initializeGame(): GameState {
 }
 
 // 1. Add these functions at the top with other utility functions
+// Add interface for the username query response
+interface UsernameResponse {
+  Socials: {
+    Social: Array<{
+      profileName: string;
+    }>;
+  };
+}
+
 async function getUsername(fid: string): Promise<string> {
-  const query = `
+  const graphQLClient = new GraphQLClient(AIRSTACK_API_URL, {
+    headers: {
+      'Authorization': AIRSTACK_API_KEY,
+    },
+  });
+
+  const query = gql`
     query ($fid: String!) {
       Socials(input: {filter: {dappName: {_eq: farcaster}, userId: {_eq: $fid}}, blockchain: ethereum}) {
         Social {
@@ -84,17 +99,15 @@ async function getUsername(fid: string): Promise<string> {
   `;
 
   try {
-    const response = await fetch(AIRSTACK_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': AIRSTACK_API_KEY,
-      },
-      body: JSON.stringify({ query, variables: { fid } }),
-    });
-
-    const data = await response.json();
-    return data?.data?.Socials?.Social?.[0]?.profileName || 'Player';
+    const data = await graphQLClient.request<UsernameResponse>(query, { fid });
+    console.log('Username API response:', JSON.stringify(data));
+    
+    if (data?.Socials?.Social?.[0]?.profileName) {
+      return data.Socials.Social[0].profileName;
+    } else {
+      console.log('Unexpected API response structure:', JSON.stringify(data));
+      return 'Player';
+    }
   } catch (error) {
     console.error('Error fetching username:', error);
     return 'Player';
