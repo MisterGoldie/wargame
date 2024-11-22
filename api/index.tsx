@@ -140,17 +140,20 @@ interface Card {
 }
 
 type GameState = {
-  p: Card[];
-  c: Card[];
-  pc: Card | null;
-  cc: Card | null;
-  m: string;
-  w: boolean;
-  warPile?: Card[];
-  victoryMessage?: string;
-  lastDrawTime?: number;
-  username?: string;
-  fanTokenData?: { ownsToken: boolean; balance: number };
+  p: Card[];                // Player's deck
+  c: Card[];                // Computer's deck
+  pc: Card | null;          // Player's current card
+  cc: Card | null;          // Computer's current card
+  m: string;                // Game message
+  w: boolean;               // War state
+  warPile?: Card[];         // Cards in war pile
+  victoryMessage?: string;  // Victory message overlay
+  lastDrawTime?: number;    // Cooldown tracking
+  username?: string;        // Player's username
+  fanTokenData?: {          // Fan token data
+    ownsToken: boolean;
+    balance: number;
+  };
 };
 
 function getCardLabel(value: number): string {
@@ -506,32 +509,31 @@ function handleTurn(state: GameState): GameState {
     };
   }
 
-  // Draw current cards
   const pc = state.p.pop()!;
   const cc = state.c.pop()!;
-  const currentCards = [pc, cc];
+  const cards = [pc, cc];
 
   // War resolution
-  if (state.w && state.warPile) {
+  if (state.w) {
+    const allCards = [...cards, ...(state.warPile || [])];
     const winner = pc.v > cc.v ? 'p' : 'c';
+    
     const newState = {
       ...state,
       pc, cc,
       w: false,
-      m: winner === 'p' 
-        ? `You won the WAR with ${getCardLabel(pc.v)}!` 
-        : `Computer won the WAR with ${getCardLabel(cc.v)}!`,
+      m: '', // Clear the war message
       victoryMessage: winner === 'p' 
-        ? '🎉 EPIC WAR VICTORY! 🎉' 
-        : '💔 DEFEATED IN BATTLE! 💔',
-      warPile: []  // Clear war pile after resolution
+        ? `You won the WAR with ${getCardLabel(pc.v)}!` 
+        : `CPU won the WAR with ${getCardLabel(cc.v)}!`,
+      warPile: []
     };
 
-    // Add all cards to winner's deck
+    // Winner takes all cards
     if (winner === 'p') {
-      newState.p.unshift(...currentCards, ...state.warPile);
+      newState.p.unshift(...allCards);
     } else {
-      newState.c.unshift(...currentCards, ...state.warPile);
+      newState.c.unshift(...allCards);
     }
 
     return newState;
@@ -547,24 +549,25 @@ function handleTurn(state: GameState): GameState {
         pc, cc,
         w: false,
         m: `Not enough cards for war! ${winner === 'p' ? 'You win!' : 'Computer wins!'}`,
+        victoryMessage: undefined
       };
     }
 
-    // Draw 3 face-down cards from each player for war
-    const pWarCards = state.p.splice(-3).map(card => ({...card, hidden: true}));
-    const cWarCards = state.c.splice(-3).map(card => ({...card, hidden: true}));
-
-    // Add current cards and face-down cards to war pile
+    // Draw face-down cards
+    const pWarCards = state.p.splice(-3);
+    const cWarCards = state.c.splice(-3);
+    
     return {
       ...state,
       pc, cc,
       w: true,
       warPile: [
-        ...currentCards,   // The tied cards
-        ...pWarCards,      // Player's 3 face-down cards
-        ...cWarCards       // CPU's 3 face-down cards
+        ...cards,
+        ...pWarCards.map(c => ({...c, hidden: true})),
+        ...cWarCards.map(c => ({...c, hidden: true}))
       ],
-      m: "WAR! 3 cards face down, next card decides the winner!"
+      m: "WAR! 3 cards face down, next card decides the winner!",
+      victoryMessage: undefined // Clear any previous victory message
     };
   }
 
@@ -573,17 +576,18 @@ function handleTurn(state: GameState): GameState {
   const newState = {
     ...state,
     pc, cc,
-    w: false
+    w: false,
+    victoryMessage: undefined // Clear any previous victory message
   };
 
   if (winner === 'p') {
-    newState.p.unshift(...currentCards);
+    newState.p.unshift(...cards);
     newState.m = `You win with ${getCardLabel(pc.v)}!`;
   } else {
-    newState.c.unshift(...currentCards);
+    newState.c.unshift(...cards);
     newState.m = `Computer wins with ${getCardLabel(cc.v)}!`;
   }
-
+  
   return newState;
 }
 
@@ -681,267 +685,237 @@ function GameCard({ card }: { card: Card }) {
 
 // Game frame handler
 app.frame('/game', async (c) => {
-  try {
-    const { buttonValue } = c;
-    const fid = c.frameData?.fid;
-    
-    // Get username and check tokens only if there's no buttonValue (new game)
-    let username = 'Player';
-    let fanTokenData = { ownsToken: false, balance: 0 };
+  const { buttonValue } = c;
+  const fid = c.frameData?.fid;
+  
+  // Get username and check tokens only if there's no buttonValue (new game)
+  let username = 'Player';
+  let fanTokenData = { ownsToken: false, balance: 0 };
 
-    // Define styles first
-    const styles = {
-      root: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '1080px',
-        height: '1080px',
-        backgroundColor: '#1a1a1a',
-        color: 'white',
-        padding: '40px'
-      },
-      gamePanel: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        padding: '40px',
-        borderRadius: '10px',
-        gap: '40px'
-      },
-      counter: {
-        display: 'flex',
-        gap: '40px',
-        fontSize: '24px',
-        color: 'white'
-      },
-      cardArea: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '40px'
-      },
-      vsText: {
-        fontSize: '36px',
-        fontWeight: 'bold',
-        color: 'white'
-      },
-      messageArea: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '20px'
-      },
-      gameMessage: (isWar: boolean) => ({
-        fontSize: '32px',
-        color: isWar ? '#ff4444' : 'white'
-      }),
-      warIndicator: {
-        fontSize: '48px',
-        color: '#ff4444',
-        fontWeight: 'bold'
-      },
-      victoryMessage: {
-        fontSize: '48px',
-        color: '#4ADE80',
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginTop: '20px'
-      },
-      fanTokenIndicator: {
-        fontSize: '18px',
-        color: '#4ADE80',
-        marginTop: '10px',
-        textAlign: 'center'
-      }
-    };
-
-    if (!buttonValue && fid) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-        const [usernameResult, tokenData] = await Promise.all([
-          getUsername(fid.toString()),
-          checkFanTokenOwnership(fid.toString())
-        ]);
-        
-        clearTimeout(timeoutId);
-        username = usernameResult;
-        fanTokenData = tokenData;
-      } catch (error) {
-        console.error('Error during initial game setup:', error);
-        // Continue with defaults if APIs fail
-      }
-    } else if (buttonValue?.startsWith('draw:')) {
-      try {
-        const encodedState = buttonValue.split(':')[1];
-        const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
-        username = decodedState.username || 'Player';
-        fanTokenData = decodedState.fanTokenData || { ownsToken: false, balance: 0 };
-      } catch (error) {
-        console.error('Error decoding state:', error);
-      }
+  // Define styles first
+  const styles = {
+    root: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '1080px',
+      height: '1080px',
+      backgroundColor: '#1a1a1a',
+      color: 'white',
+      padding: '40px'
+    },
+    gamePanel: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      padding: '40px',
+      borderRadius: '10px',
+      gap: '40px'
+    },
+    counter: {
+      display: 'flex',
+      gap: '40px',
+      fontSize: '24px',
+      color: 'white'
+    },
+    cardArea: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '40px'
+    },
+    vsText: {
+      fontSize: '36px',
+      fontWeight: 'bold',
+      color: 'white'
+    },
+    messageArea: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '20px'
+    },
+    gameMessage: (isWar: boolean) => ({
+      fontSize: '32px',
+      color: isWar ? '#ff4444' : 'white'
+    }),
+    warIndicator: {
+      fontSize: '48px',
+      color: '#ff4444',
+      fontWeight: 'bold'
+    },
+    victoryMessage: {
+      fontSize: '48px',
+      color: '#4ADE80',
+      fontWeight: 'bold',
+      textAlign: 'center',
+      marginTop: '20px'
+    },
+    fanTokenIndicator: {
+      fontSize: '18px',
+      color: '#4ADE80',
+      marginTop: '10px',
+      textAlign: 'center'
     }
+  };
 
-    let state: GameState;
-    if (buttonValue?.startsWith('draw:')) {
-      try {
-        const encodedState = buttonValue.split(':')[1];
-        const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
-        
-        if (isOnCooldown(decodedState.lastDrawTime)) {
-          return c.res({
-            image: (
-              <div style={styles.root}>
-                <div style={styles.gamePanel}>
-                  <span style={{
-                    fontSize: '24px',
-                    color: '#ff4444',
-                    textAlign: 'center'
-                  }}>
-                    Please wait a moment before drawing again...
-                  </span>
-                </div>
-              </div>
-            ),
-            intents: [
-              <Button value={`draw:${buttonValue.split(':')[1]}`}>
-                Draw Card
-              </Button>
-            ]
-          });
-        }
-
-        decodedState.lastDrawTime = Date.now();
-        state = handleTurn(decodedState);
-        state.username = username;
-        state.fanTokenData = fanTokenData;
-      } catch (error) {
-        console.error('State processing error:', error);
-        state = { ...initializeGame(), username, fanTokenData };
-      }
-    } else {
-      state = { ...initializeGame(), username, fanTokenData };
+  if (!buttonValue && fid) {
+    try {
+      // Do initial checks in parallel
+      const [usernameResult, tokenData] = await Promise.all([
+        getUsername(fid.toString()),
+        checkFanTokenOwnership(fid.toString())
+      ]);
+      username = usernameResult;
+      fanTokenData = tokenData;
+    } catch (error) {
+      console.error('Error during initial game setup:', error);
     }
-
-    const isGameOver = !state.p.length || !state.c.length;
-
-    if (isGameOver && fid) {
-      const result = state.p.length > 0 ? 'win' : 'loss';
-      try {
-        await updateGameStats(fid.toString(), result);
-        const stats = await getGameStats(fid.toString());
-        console.log(`Updated stats for FID ${fid}:`, stats);
-      } catch (error) {
-        console.error('Error updating game stats:', error);
-      }
+  } else if (buttonValue?.startsWith('draw:')) {
+    // Reuse the username from state but don't check tokens again
+    try {
+      const encodedState = buttonValue.split(':')[1];
+      const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
+      username = decodedState.username || 'Player';
+      fanTokenData = decodedState.fanTokenData || { ownsToken: false, balance: 0 };
+    } catch (error) {
+      console.error('Error decoding state:', error);
     }
+  }
 
-    // Return the existing game UI
-    return c.res({
-      image: (
-        <div style={styles.root}>
-          <div style={styles.gamePanel}>
-            <div style={styles.counter}>
-              <span>{username}'s Cards: {state.p.length}</span>
-              <span>CPU Cards: {state.c.length}</span>
-            </div>
-
-            {fanTokenData.ownsToken && (
-              <span style={styles.fanTokenIndicator}>
-                POD Fan Token Holder: {(fanTokenData.balance).toFixed(2)}
-              </span>
-            )}
-
-            <div style={styles.cardArea}>
-              {state.pc && state.cc ? (
-                <>
-                  <GameCard card={state.pc} />
-                  <span style={styles.vsText}>VS</span>
-                  <GameCard card={state.cc} />
-                </>
-              ) : (
-                <span style={{ fontSize: '24px', color: 'white' }}>Draw a card to begin!</span>
-              )}
-            </div>
-
-            <div style={styles.messageArea}>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '20px'
-              }}>
+  let state: GameState;
+  if (buttonValue?.startsWith('draw:')) {
+    try {
+      const encodedState = buttonValue.split(':')[1];
+      const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
+      
+      if (isOnCooldown(decodedState.lastDrawTime)) {
+        return c.res({
+          image: (
+            <div style={styles.root}>
+              <div style={styles.gamePanel}>
                 <span style={{
-                  fontSize: '32px',
-                  color: state.w ? '#ff4444' : 'white',
+                  fontSize: '24px',
+                  color: '#ff4444',
                   textAlign: 'center'
                 }}>
-                  {state.m}
+                  Please wait a moment before drawing again...
                 </span>
-
-                {state.w && (
-                  <span style={{
-                    fontSize: '48px',
-                    color: '#ff4444',
-                    fontWeight: 'bold',
-                    textAlign: 'center'
-                  }}>
-                    WAR!
-                  </span>
-                )}
-
-                {state.victoryMessage && (
-                  <span style={{
-                    fontSize: '48px',
-                    color: '#4ADE80',
-                    fontWeight: 'bold',
-                    textAlign: 'center'
-                  }}>
-                    {state.victoryMessage}
-                  </span>
-                )}
               </div>
+            </div>
+          ),
+          intents: [
+            <Button value={`draw:${buttonValue.split(':')[1]}`}>
+              Draw Card
+            </Button>
+          ]
+        });
+      }
+
+      decodedState.lastDrawTime = Date.now();
+      state = handleTurn(decodedState);
+      state.username = username;
+      state.fanTokenData = fanTokenData;
+    } catch (error) {
+      console.error('State processing error:', error);
+      state = { ...initializeGame(), username, fanTokenData };
+    }
+  } else {
+    state = { ...initializeGame(), username, fanTokenData };
+  }
+
+  const isGameOver = !state.p.length || !state.c.length;
+
+  if (isGameOver && fid) {
+    const result = state.p.length > 0 ? 'win' : 'loss';
+    try {
+      await updateGameStats(fid.toString(), result);
+      const stats = await getGameStats(fid.toString());
+      console.log(`Updated stats for FID ${fid}:`, stats);
+    } catch (error) {
+      console.error('Error updating game stats:', error);
+    }
+  }
+
+  // Return the existing game UI
+  return c.res({
+    image: (
+      <div style={styles.root}>
+        <div style={styles.gamePanel}>
+          <div style={styles.counter}>
+            <span>{username}'s Cards: {state.p.length}</span>
+            <span>CPU Cards: {state.c.length}</span>
+          </div>
+
+          {fanTokenData.ownsToken && (
+            <span style={styles.fanTokenIndicator}>
+              POD Fan Token Holder: {(fanTokenData.balance).toFixed(2)}
+            </span>
+          )}
+
+          <div style={styles.cardArea}>
+            {state.pc && state.cc ? (
+              <>
+                <GameCard card={state.pc} />
+                <span style={styles.vsText}>VS</span>
+                <GameCard card={state.cc} />
+              </>
+            ) : (
+              <span style={{ fontSize: '24px', color: 'white' }}>Draw a card to begin!</span>
+            )}
+          </div>
+
+          <div style={styles.messageArea}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '20px'
+            }}>
+              <span style={{
+                fontSize: '32px',
+                color: state.w ? '#ff4444' : 'white',
+                textAlign: 'center'
+              }}>
+                {state.m}
+              </span>
+
+              {state.w && (
+                <span style={{
+                  fontSize: '48px',
+                  color: '#ff4444',
+                  fontWeight: 'bold',
+                  textAlign: 'center'
+                }}>
+                  WAR!
+                </span>
+              )}
+
+              {state.victoryMessage && (
+                <span style={{
+                  fontSize: '48px',
+                  color: '#4ADE80',
+                  fontWeight: 'bold',
+                  textAlign: 'center'
+                }}>
+                  {state.victoryMessage}
+                </span>
+              )}
             </div>
           </div>
         </div>
-      ),
-      intents: [
-        <Button 
-          value={!isGameOver ? `draw:${compressState(state)}` : undefined}
-          action={isGameOver ? '/' : undefined}
-        >
-          {isGameOver ? 'Play Again' : state.w ? 'Draw War Cards' : 'Draw Card'}
-        </Button>
-      ]
-    });
-    
-  } catch (error) {
-    console.error('Critical game error:', error);
-    // Return a graceful error state
-    return c.res({
-      image: (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '1080px',
-          height: '1080px',
-          backgroundColor: '#1a1a1a',
-          color: 'white'
-        }}>
-          <h1>Game Error</h1>
-          <p>Please try again</p>
-        </div>
-      ),
-      intents: [
-        <Button action="/">Restart Game</Button>
-      ]
-    });
-  }
+      </div>
+    ),
+    intents: [
+      <Button 
+        value={!isGameOver ? `draw:${compressState(state)}` : undefined}
+        action={isGameOver ? '/' : undefined}
+      >
+        {isGameOver ? 'Play Again' : state.w ? 'Draw War Cards' : 'Draw Card'}
+      </Button>
+    ]
+  });
 });
 
 // Add share route
