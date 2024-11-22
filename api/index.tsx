@@ -516,8 +516,6 @@ function handleTurn(state: GameState): GameState {
   // War resolution
   if (state.w && state.warPile) {
     const winner = pc.v > cc.v ? 'p' : 'c';
-    const warCards = state.warPile.length; // Should be 8 total (2 face up + 6 face down)
-    
     const newState = {
       ...state,
       pc, cc,
@@ -531,17 +529,16 @@ function handleTurn(state: GameState): GameState {
       warPile: []
     };
 
-    // Transfer all war cards to winner
     if (winner === 'p') {
-      // Add current cards + war pile to player's deck
-      newState.p = [...newState.p, pc, cc, ...state.warPile];
-      // Remove war cards from CPU's deck
-      newState.c = newState.c.slice(0, newState.c.length - (warCards / 2));
+      // Player wins - add 8 cards to player's deck
+      newState.p = [...newState.p, ...Array(8)];
+      // Remove 4 cards from CPU's deck
+      newState.c = newState.c.slice(0, newState.c.length - 4);
     } else {
-      // Add current cards + war pile to CPU's deck
-      newState.c = [...newState.c, pc, cc, ...state.warPile];
-      // Remove war cards from player's deck
-      newState.p = newState.p.slice(0, newState.p.length - (warCards / 2));
+      // CPU wins - add 8 cards to CPU's deck
+      newState.c = [...newState.c, ...Array(8)];
+      // Remove 4 cards from player's deck
+      newState.p = newState.p.slice(0, newState.p.length - 4);
     }
 
     return newState;
