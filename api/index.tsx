@@ -16,15 +16,17 @@ const MOXIE_API_URL = "https://api.studio.thegraph.com/query/23537/moxie_protoco
 interface Card {
   v: number;
   s: string;
+  hidden?: boolean;
 }
 
 type GameState = {
-  p: Card[];    // player cards
-  c: Card[];    // computer cards
-  pc: Card | null;  // player current card
-  cc: Card | null;  // computer current card
-  m: string;    // message
-  w: boolean;   // is war
+  p: Card[];
+  c: Card[];
+  pc: Card | null;
+  cc: Card | null;
+  m: string;
+  w: boolean;
+  warPile?: Card[];
 };
 
 function getCardLabel(value: number): string {
@@ -168,14 +170,30 @@ function handleTurn(state: GameState): GameState {
   const cards = [pc, cc];
 
   if (pc.v === cc.v) {
+    // War scenario
+    if (state.p.length < 4 || state.c.length < 4) {
+      const winner = state.p.length > state.c.length ? 'p' : 'c';
+      return {
+        ...state,
+        m: `Not enough cards for war! ${winner === 'p' ? 'You win!' : 'Computer wins!'}`,
+        w: false
+      };
+    }
+
+    // Draw face-down cards
+    const pWarCards = state.p.splice(-3).map(card => ({ ...card, hidden: true }));
+    const cWarCards = state.c.splice(-3).map(card => ({ ...card, hidden: true }));
+    
     return {
       ...state,
       pc, cc,
-      m: "WAR! Draw again!",
-      w: true
+      w: true,
+      warPile: [...cards, ...pWarCards, ...cWarCards],
+      m: "WAR! 3 cards face down, next card decides the winner!"
     };
   }
 
+  // Normal or war resolution
   const winner = pc.v > cc.v ? 'p' : 'c';
   const newState = {
     ...state,
@@ -183,13 +201,15 @@ function handleTurn(state: GameState): GameState {
     w: false
   };
 
+  const allCards = [...cards, ...(state.warPile || [])];
   if (winner === 'p') {
-    newState.p.unshift(...cards);
+    newState.p.unshift(...allCards);
     newState.m = `You win with ${getCardLabel(pc.v)} vs ${getCardLabel(cc.v)}!`;
   } else {
-    newState.c.unshift(...cards);
+    newState.c.unshift(...allCards);
     newState.m = `Computer wins with ${getCardLabel(cc.v)} vs ${getCardLabel(pc.v)}!`;
   }
+  newState.warPile = [];
 
   return newState;
 }
@@ -243,9 +263,22 @@ const CardStyle = {
 } as const;
 
 function GameCard({ card }: { card: Card }) {
+  if (card.hidden) {
+    return (
+      <div style={{
+        ...CardStyle,
+        backgroundColor: '#6B7280',
+        color: 'white'
+      }}>
+        <span style={{ fontSize: '24px' }}>🂠</span>
+      </div>
+    );
+  }
+  
   return (
     <div style={{
       ...CardStyle,
+      backgroundColor: 'white',
       color: card.s === '♥' || card.s === '♦' ? '#ff0000' : '#000000'
     }}>
       <span style={{ fontSize: '24px' }}>{getCardLabel(card.v)}</span>
