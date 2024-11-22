@@ -500,8 +500,11 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
+  console.log('Starting turn handling');
+  
   // Game over check
   if (!state.p.length || !state.c.length) {
+    console.log('Game over detected');
     return {
       ...state,
       m: `Game Over! ${state.p.length ? 'You win!' : 'Computer wins!'}`,
@@ -515,6 +518,11 @@ function handleTurn(state: GameState): GameState {
 
   // War resolution
   if (state.w && state.warPile) {
+    console.log('Resolving war', {
+      playerCard: pc.v,
+      cpuCard: cc.v,
+      warPileSize: state.warPile.length
+    });
     const winner = pc.v > cc.v ? 'p' : 'c';
     const newState = {
       ...state,
@@ -526,8 +534,7 @@ function handleTurn(state: GameState): GameState {
       victoryMessage: winner === 'p' 
         ? '🎉 EPIC WAR VICTORY! 🎉' 
         : '💔 DEFEATED IN BATTLE! 💔',
-      warPile: [],
-      messageColor: winner === 'p' ? '#4ADE80' : '#ff4444'
+      warPile: []
     };
 
     if (winner === 'p') {
@@ -803,10 +810,19 @@ app.frame('/game', async (c) => {
     let state: GameState;
     if (buttonValue?.startsWith('draw:')) {
       try {
+        console.log('Processing draw action');
         const encodedState = buttonValue.split(':')[1];
         const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
         
+        console.log('Game state before turn:', {
+          playerCards: decodedState.p.length,
+          cpuCards: decodedState.c.length,
+          isWar: decodedState.w,
+          warPileSize: decodedState.warPile?.length
+        });
+
         if (isOnCooldown(decodedState.lastDrawTime)) {
+          console.log('Cooldown active, skipping turn');
           return c.res({
             image: (
               <div style={styles.root}>
@@ -831,10 +847,22 @@ app.frame('/game', async (c) => {
 
         decodedState.lastDrawTime = Date.now();
         state = handleTurn(decodedState);
+        
+        console.log('Game state after turn:', {
+          playerCards: state.p.length,
+          cpuCards: state.c.length,
+          isWar: state.w,
+          warPileSize: state.warPile?.length,
+          message: state.m
+        });
+
         state.username = username;
         state.fanTokenData = fanTokenData;
       } catch (error) {
-        console.error('State processing error:', error);
+        console.error('State processing error:', {
+          error,
+          buttonValue: buttonValue.substring(0, 100) // Log first 100 chars of button value
+        });
         state = { ...initializeGame(), username, fanTokenData };
       }
     } else {
