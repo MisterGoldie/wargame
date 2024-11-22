@@ -276,72 +276,104 @@ app.frame('/game', async (c) => {
 
   const isGameOver = !state.p.length || !state.c.length;
 
+  // Style definitions with comments
+  const styles = {
+    // Root container - Dark background (#1a1a1a)
+    root: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '1080px',
+      height: '1080px',
+      backgroundColor: '#1a1a1a', // Dark theme background
+      color: 'white', // Default text color
+      padding: '40px'
+    },
+
+    // Game panel - Semi-transparent black overlay
+    gamePanel: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0,0,0,0.7)', // Transparent black overlay
+      padding: '40px',
+      borderRadius: '10px',
+      gap: '40px'
+    },
+
+    // Card counter section - White text
+    counter: {
+      display: 'flex',
+      gap: '40px',
+      fontSize: '24px',
+      color: 'white' // Counter text color
+    },
+
+    // Card display area
+    cardArea: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '40px'
+    },
+
+    // VS text - White
+    vsText: {
+      fontSize: '36px',
+      fontWeight: 'bold',
+      color: 'white'
+    },
+
+    // Message area - White text (Red for war)
+    messageArea: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '20px'
+    },
+
+    // Game message text
+    gameMessage: (isWar: boolean) => ({
+      fontSize: '32px',
+      color: isWar ? '#ff4444' : 'white' // Red for war, otherwise white
+    }),
+
+    // War indicator - Red text (#ff4444)
+    warIndicator: {
+      fontSize: '48px',
+      color: '#ff4444', // War text color
+      fontWeight: 'bold'
+    }
+  };
+
   return c.res({
     image: (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '1080px',
-        height: '1080px',
-        backgroundColor: '#1a1a1a',
-        color: 'white',
-        padding: '40px'
-      }}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          backgroundColor: 'rgba(0,0,0,0.7)',
-          padding: '40px',
-          borderRadius: '10px',
-          gap: '40px'
-        }}>
-          <div style={{
-            display: 'flex',
-            gap: '40px',
-            fontSize: '24px'
-          }}>
+      <div style={styles.root}>
+        <div style={styles.gamePanel}>
+          <div style={styles.counter}>
             <span>Your Cards: {state.p.length}</span>
             <span>CPU Cards: {state.c.length}</span>
           </div>
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '40px'
-          }}>
+          <div style={styles.cardArea}>
             {state.pc && state.cc ? (
               <>
                 <GameCard card={state.pc} />
-                <span style={{ fontSize: '36px', fontWeight: 'bold' }}>VS</span>
+                <span style={styles.vsText}>VS</span>
                 <GameCard card={state.cc} />
               </>
             ) : (
-              <span style={{ fontSize: '24px' }}>Draw a card to begin!</span>
+              <span style={{ fontSize: '24px', color: 'white' }}>Draw a card to begin!</span>
             )}
           </div>
 
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '20px'
-          }}>
-            <span style={{
-              fontSize: '32px',
-              color: state.w ? '#ff4444' : 'white'
-            }}>
+          <div style={styles.messageArea}>
+            <span style={styles.gameMessage(state.w)}>
               {state.m}
             </span>
 
             {state.w && (
-              <span style={{
-                fontSize: '48px',
-                color: '#ff4444',
-                fontWeight: 'bold'
-              }}>
+              <span style={styles.warIndicator}>
                 WAR!
               </span>
             )}
