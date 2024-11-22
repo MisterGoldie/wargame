@@ -483,21 +483,42 @@ app.frame('/game', async (c) => {
           </div>
 
           <div style={styles.messageArea}>
-            <span style={styles.gameMessage(state.w)}>
-              {state.m}
-            </span>
-
-            {state.w && (
-              <span style={styles.warIndicator}>
-                WAR!
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '20px'
+            }}>
+              <span style={{
+                fontSize: '32px',
+                color: state.w ? '#ff4444' : 'white',
+                textAlign: 'center'
+              }}>
+                {state.m}
               </span>
-            )}
 
-            {state.victoryMessage && (
-              <span style={styles.victoryMessage}>
-                {state.victoryMessage}
-              </span>
-            )}
+              {state.w && (
+                <span style={{
+                  fontSize: '48px',
+                  color: '#ff4444',
+                  fontWeight: 'bold',
+                  textAlign: 'center'
+                }}>
+                  WAR!
+                </span>
+              )}
+
+              {state.victoryMessage && (
+                <span style={{
+                  fontSize: '48px',
+                  color: '#4ADE80',
+                  fontWeight: 'bold',
+                  textAlign: 'center'
+                }}>
+                  {state.victoryMessage}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
