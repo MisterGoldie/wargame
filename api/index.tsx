@@ -523,7 +523,10 @@ function handleTurn(state: GameState): GameState {
       m: winner === 'p' 
         ? `You won the WAR with ${getCardLabel(pc.v)}!` 
         : `Computer won the WAR with ${getCardLabel(cc.v)}!`,
-      warPile: []
+      warPile: [],
+      victoryMessage: winner === 'p' 
+        ? '🎉 Victory in WAR! 🎉' 
+        : '💔 Defeated in WAR! 💔'
     };
 
     // Winner takes all cards
