@@ -149,6 +149,11 @@ type GameState = {
   warPile?: Card[];
   victoryMessage?: string;
   lastDrawTime?: number;
+  username?: string;
+  fanTokenData?: {
+    ownsToken: boolean;
+    balance: number;
+  };
 };
 
 function getCardLabel(value: number): string {
@@ -667,110 +672,33 @@ app.frame('/game', async (c) => {
   const { buttonValue } = c;
   const fid = c.frameData?.fid;
   
-  // Get username
+  // Get username and check tokens only if there's no buttonValue (new game)
   let username = 'Player';
-  if (fid) {
-    try {
-      username = await getUsername(fid.toString());
-    } catch (error) {
-      console.error('Error fetching username:', error);
-    }
-  }
-
-  // Get fan token data
   let fanTokenData = { ownsToken: false, balance: 0 };
-  if (fid) {
+
+  if (!buttonValue && fid) {
     try {
-      fanTokenData = await checkFanTokenOwnership(fid.toString());
+      // Do initial checks in parallel
+      const [usernameResult, tokenData] = await Promise.all([
+        getUsername(fid.toString()),
+        checkFanTokenOwnership(fid.toString())
+      ]);
+      username = usernameResult;
+      fanTokenData = tokenData;
     } catch (error) {
-      console.error('Error checking fan token ownership:', error);
+      console.error('Error during initial game setup:', error);
+    }
+  } else if (buttonValue?.startsWith('draw:')) {
+    // Reuse the username from state but don't check tokens again
+    try {
+      const encodedState = buttonValue.split(':')[1];
+      const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
+      username = decodedState.username || 'Player';
+      fanTokenData = decodedState.fanTokenData || { ownsToken: false, balance: 0 };
+    } catch (error) {
+      console.error('Error decoding state:', error);
     }
   }
-
-  // Add fan token indicator to the game panel if user owns tokens
-  const styles = {
-    // Root container - Dark background (#1a1a1a)
-    root: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '1080px',
-      height: '1080px',
-      backgroundColor: '#1a1a1a', // Dark theme background
-      color: 'white', // Default text color
-      padding: '40px'
-    },
-
-    // Game panel - Semi-transparent black overlay
-    gamePanel: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.7)', // Transparent black overlay
-      padding: '40px',
-      borderRadius: '10px',
-      gap: '40px'
-    },
-
-    // Card counter section - White text
-    counter: {
-      display: 'flex',
-      gap: '40px',
-      fontSize: '24px',
-      color: 'white' // Counter text color
-    },
-
-    // Card display area
-    cardArea: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '40px'
-    },
-
-    // VS text - White
-    vsText: {
-      fontSize: '36px',
-      fontWeight: 'bold',
-      color: 'white'
-    },
-
-    // Message area - White text (Red for war)
-    messageArea: {
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '20px'
-    },
-
-    // Game message text
-    gameMessage: (isWar: boolean) => ({
-      fontSize: '32px',
-      color: isWar ? '#ff4444' : 'white' // Red for war, otherwise white
-    }),
-
-    // War indicator - Red text (#ff4444)
-    warIndicator: {
-      fontSize: '48px',
-      color: '#ff4444', // War text color
-      fontWeight: 'bold'
-    },
-
-    victoryMessage: {
-      fontSize: '48px',
-      color: '#4ADE80', // Victory green
-      fontWeight: 'bold',
-      textAlign: 'center',
-      marginTop: '20px'
-    },
-
-    fanTokenIndicator: {
-      fontSize: '18px',
-      color: '#4ADE80',
-      marginTop: '10px',
-      textAlign: 'center'
-    }
-  };
 
   let state: GameState;
   if (buttonValue?.startsWith('draw:')) {
@@ -778,19 +706,31 @@ app.frame('/game', async (c) => {
       const encodedState = buttonValue.split(':')[1];
       const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
       
-      // Check if we're on cooldown
       if (isOnCooldown(decodedState.lastDrawTime)) {
         return c.res({
           image: (
-            <div style={styles.root}>
-              <div style={styles.gamePanel}>
-                <span style={{
-                  fontSize: '24px',
-                  color: '#ff4444',
-                  textAlign: 'center'
-                }}>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '1080px',
+              height: '1080px',
+              backgroundColor: '#1a1a1a',
+              color: 'white'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '20px'
+              }}>
+                <h1 style={{ fontSize: '72px', margin: 0 }}>
+                  War Card Game
+                </h1>
+                <div style={{ fontSize: '36px', textAlign: 'center' }}>
                   Please wait a moment before drawing again...
-                </span>
+                </div>
               </div>
             </div>
           ),
@@ -804,16 +744,17 @@ app.frame('/game', async (c) => {
         });
       }
 
-      // Add timestamp to state before processing turn
       decodedState.lastDrawTime = Date.now();
       state = handleTurn(decodedState);
+      // Add username and fanTokenData to state for next turn
+      state.username = username;
+      state.fanTokenData = fanTokenData;
     } catch (error) {
       console.error('State processing error:', error);
-      state = initializeGame();
+      state = { ...initializeGame(), username, fanTokenData };
     }
   } else {
-    state = initializeGame();
-    state.lastDrawTime = Date.now();
+    state = { ...initializeGame(), username, fanTokenData };
   }
 
   const isGameOver = !state.p.length || !state.c.length;
@@ -831,69 +772,66 @@ app.frame('/game', async (c) => {
 
   return c.res({
     image: (
-      <div style={styles.root}>
-        <div style={styles.gamePanel}>
-          <div style={styles.counter}>
-            <span>{username}'s Cards: {state.p.length}</span>
-            <span>CPU Cards: {state.c.length}</span>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '1080px',
+        height: '1080px',
+        backgroundColor: '#1a1a1a',
+        color: 'white',
+        fontFamily: 'Silkscreen'
+      }}>
+        {/* Computer's deck count */}
+        <div style={{ fontSize: '24px', marginBottom: '20px' }}>
+          Computer's Cards: {state.c.length}
+        </div>
+
+        {/* Game area */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '40px', 
+          marginBottom: '20px',
+          alignItems: 'center' 
+        }}>
+          {/* Computer's card */}
+          <div style={{ width: '120px', height: '180px' }}>
+            {state.cc && <GameCard card={state.cc} />}
           </div>
 
-          {fanTokenData.ownsToken && (
-            <span style={styles.fanTokenIndicator}>
-              POD Fan Token Holder: {(fanTokenData.balance).toFixed(2)}
-            </span>
+          {/* War pile */}
+          {state.w && state.warPile && (
+            <div style={{ 
+              display: 'flex',
+              gap: '10px',
+              position: 'absolute'
+            }}>
+              {state.warPile.map((card, i) => (
+                <GameCard key={i} card={card} />
+              ))}
+            </div>
           )}
 
-          <div style={styles.cardArea}>
-            {state.pc && state.cc ? (
-              <>
-                <GameCard card={state.pc} />
-                <span style={styles.vsText}>VS</span>
-                <GameCard card={state.cc} />
-              </>
-            ) : (
-              <span style={{ fontSize: '24px', color: 'white' }}>Draw a card to begin!</span>
-            )}
+          {/* Player's card */}
+          <div style={{ width: '120px', height: '180px' }}>
+            {state.pc && <GameCard card={state.pc} />}
           </div>
+        </div>
 
-          <div style={styles.messageArea}>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '20px'
-            }}>
-              <span style={{
-                fontSize: '32px',
-                color: state.w ? '#ff4444' : 'white',
-                textAlign: 'center'
-              }}>
-                {state.m}
-              </span>
+        {/* Message area */}
+        <div style={{ 
+          fontSize: '32px', 
+          marginBottom: '20px',
+          textAlign: 'center',
+          minHeight: '80px'
+        }}>
+          {state.victoryMessage || state.m}
+        </div>
 
-              {state.w && (
-                <span style={{
-                  fontSize: '48px',
-                  color: '#ff4444',
-                  fontWeight: 'bold',
-                  textAlign: 'center'
-                }}>
-                  WAR!
-                </span>
-              )}
-
-              {state.victoryMessage && (
-                <span style={{
-                  fontSize: '48px',
-                  color: '#4ADE80',
-                  fontWeight: 'bold',
-                  textAlign: 'center'
-                }}>
-                  {state.victoryMessage}
-                </span>
-              )}
-            </div>
-          </div>
+        {/* Player's deck count */}
+        <div style={{ fontSize: '24px' }}>
+          {state.username}'s Cards: {state.p.length}
         </div>
       </div>
     ),
