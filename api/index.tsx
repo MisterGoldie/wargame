@@ -689,85 +689,90 @@ app.frame('/game', async (c) => {
 
   // Add fan token indicator to the game panel if user owns tokens
   const styles = {
-    // Root container - Dark background (#1a1a1a)
     root: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: '#000000',
       display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
       justifyContent: 'center',
-      width: '1080px',
-      height: '1080px',
-      backgroundColor: '#1a1a1a', // Dark theme background
-      color: 'white', // Default text color
+      alignItems: 'center',
       padding: '40px'
     },
 
-    // Game panel - Semi-transparent black overlay
     gamePanel: {
+      width: '90%',
+      maxWidth: '900px',
+      backgroundColor: '#1a1a1a',
+      borderRadius: '20px',
+      padding: '40px',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.7)', // Transparent black overlay
-      padding: '40px',
-      borderRadius: '10px',
-      gap: '40px'
+      gap: '30px'
     },
 
-    // Card counter section - White text
     counter: {
+      width: '100%',
       display: 'flex',
-      gap: '40px',
-      fontSize: '24px',
-      color: 'white' // Counter text color
+      justifyContent: 'space-between',
+      fontSize: '32px',
+      color: 'white',
+      marginBottom: '20px'
     },
 
-    // Card display area
     cardArea: {
       display: 'flex',
       alignItems: 'center',
-      gap: '40px'
+      gap: '40px',
+      marginTop: '30px',
+      marginBottom: '30px'
     },
 
-    // VS text - White
-    vsText: {
-      fontSize: '36px',
-      fontWeight: 'bold',
-      color: 'white'
-    },
-
-    // Message area - White text (Red for war)
-    messageArea: {
+    card: {
+      width: '200px',
+      height: '280px',
+      backgroundColor: 'white',
+      borderRadius: '15px',
       display: 'flex',
       flexDirection: 'column',
+      justifyContent: 'center',
       alignItems: 'center',
-      gap: '20px'
+      fontSize: '48px',
+      fontWeight: 'bold',
+      border: '3px solid #333'
     },
 
-    // Game message text
-    gameMessage: (isWar: boolean) => ({
-      fontSize: '32px',
-      color: isWar ? '#ff4444' : 'white' // Red for war, otherwise white
-    }),
-
-    // War indicator - Red text (#ff4444)
-    warIndicator: {
+    vsText: {
       fontSize: '48px',
-      color: '#ff4444', // War text color
+      color: 'white',
       fontWeight: 'bold'
     },
 
+    messageArea: {
+      width: '100%',
+      textAlign: 'center',
+      marginTop: '30px'
+    },
+
+    warText: {
+      fontSize: '64px',
+      color: '#ff4444',
+      fontWeight: 'bold',
+      textAlign: 'center'
+    },
+
     victoryMessage: {
-      fontSize: '48px',
-      color: '#4ADE80', // Victory green
+      fontSize: '56px',
+      color: '#4ADE80',
       fontWeight: 'bold',
       textAlign: 'center',
-      marginTop: '20px'
+      marginTop: '30px'
     },
 
     fanTokenIndicator: {
-      fontSize: '18px',
+      fontSize: '24px',
       color: '#4ADE80',
-      marginTop: '10px',
+      marginTop: '15px',
       textAlign: 'center'
     }
   };
@@ -785,7 +790,7 @@ app.frame('/game', async (c) => {
             <div style={styles.root}>
               <div style={styles.gamePanel}>
                 <span style={{
-                  fontSize: '24px',
+                  fontSize: '32px',
                   color: '#ff4444',
                   textAlign: 'center'
                 }}>
@@ -852,7 +857,7 @@ app.frame('/game', async (c) => {
                 <GameCard card={state.cc} />
               </>
             ) : (
-              <span style={{ fontSize: '24px', color: 'white' }}>Draw a card to begin!</span>
+              <span style={{ fontSize: '32px', color: 'white' }}>Draw a card to begin!</span>
             )}
           </div>
 
@@ -864,7 +869,7 @@ app.frame('/game', async (c) => {
               gap: '20px'
             }}>
               <span style={{
-                fontSize: '32px',
+                fontSize: '40px',
                 color: state.w ? '#ff4444' : 'white',
                 textAlign: 'center'
               }}>
@@ -873,7 +878,7 @@ app.frame('/game', async (c) => {
 
               {state.w && (
                 <span style={{
-                  fontSize: '48px',
+                  fontSize: '64px',
                   color: '#ff4444',
                   fontWeight: 'bold',
                   textAlign: 'center'
@@ -884,7 +889,7 @@ app.frame('/game', async (c) => {
 
               {state.victoryMessage && (
                 <span style={{
-                  fontSize: '48px',
+                  fontSize: '56px',
                   color: '#4ADE80',
                   fontWeight: 'bold',
                   textAlign: 'center'
