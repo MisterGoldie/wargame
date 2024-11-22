@@ -74,7 +74,7 @@ interface GameStats {
 async function updateGameStats(fid: string, result: 'win' | 'loss' | 'tie'): Promise<void> {
   try {
     const firestore = getDb();
-    const statsRef = firestore.collection('warGameStats').doc(fid);
+    const statsRef = firestore.collection('farcasterGames').doc('war game').collection('players').doc(fid);
     
     await firestore.runTransaction(async (transaction) => {
       const doc = await transaction.get(statsRef);
@@ -88,15 +88,17 @@ async function updateGameStats(fid: string, result: 'win' | 'loss' | 'tie'): Pro
       const newStats = {
         ...currentStats,
         [result === 'win' ? 'wins' : result === 'loss' ? 'losses' : 'ties']: currentStats[result === 'win' ? 'wins' : result === 'loss' ? 'losses' : 'ties'] + 1,
-        gamesPlayed: currentStats.gamesPlayed + 1
+        gamesPlayed: currentStats.gamesPlayed + 1,
+        lastPlayed: admin.firestore.FieldValue.serverTimestamp(),
+        fid: fid
       };
 
       transaction.set(statsRef, newStats);
     });
 
-    console.log(`Updated game stats for FID ${fid}:`, result);
+    console.log(`Updated war game stats for FID ${fid}:`, result);
   } catch (error) {
-    console.error('Error updating game stats:', error);
+    console.error('Error updating war game stats:', error);
     throw error;
   }
 }
@@ -104,7 +106,7 @@ async function updateGameStats(fid: string, result: 'win' | 'loss' | 'tie'): Pro
 async function getGameStats(fid: string): Promise<GameStats> {
   try {
     const firestore = getDb();
-    const statsDoc = await firestore.collection('warGameStats').doc(fid).get();
+    const statsDoc = await firestore.collection('farcasterGames').doc('war game').collection('players').doc(fid).get();
     
     if (!statsDoc.exists) {
       return {
@@ -117,7 +119,7 @@ async function getGameStats(fid: string): Promise<GameStats> {
 
     return statsDoc.data() as GameStats;
   } catch (error) {
-    console.error('Error fetching game stats:', error);
+    console.error('Error fetching war game stats:', error);
     throw error;
   }
 }
