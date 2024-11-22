@@ -508,21 +508,21 @@ function handleTurn(state: GameState): GameState {
 
   const pc = state.p.pop()!;
   const cc = state.c.pop()!;
-  const cards = [pc, cc];
+  const currentCards = [pc, cc];
 
   // War resolution
-  if (state.w) {
-    const allCards = [...cards, ...(state.warPile || [])];
+  if (state.w && state.warPile) {
+    // Add current cards to war pile
+    const allCards = [...currentCards, ...state.warPile];
     const winner = pc.v > cc.v ? 'p' : 'c';
     
     const newState = {
       ...state,
       pc, cc,
       w: false,
-      m: '', // Clear the war message
-      victoryMessage: winner === 'p' 
+      m: winner === 'p' 
         ? `You won the WAR with ${getCardLabel(pc.v)}!` 
-        : `CPU won the WAR with ${getCardLabel(cc.v)}!`,
+        : `Computer won the WAR with ${getCardLabel(cc.v)}!`,
       warPile: []
     };
 
@@ -546,11 +546,10 @@ function handleTurn(state: GameState): GameState {
         pc, cc,
         w: false,
         m: `Not enough cards for war! ${winner === 'p' ? 'You win!' : 'Computer wins!'}`,
-        victoryMessage: undefined
       };
     }
 
-    // Draw face-down cards
+    // Draw 3 face-down cards from each player
     const pWarCards = state.p.splice(-3);
     const cWarCards = state.c.splice(-3);
     
@@ -559,33 +558,29 @@ function handleTurn(state: GameState): GameState {
       pc, cc,
       w: true,
       warPile: [
-        ...cards,
-        ...pWarCards.map(c => ({...c, hidden: true})),
-        ...cWarCards.map(c => ({...c, hidden: true}))
+        ...currentCards,               // Current tied cards
+        ...pWarCards,                  // Player's 3 face-down cards
+        ...cWarCards                   // CPU's 3 face-down cards
       ],
-      m: "WAR! 3 cards face down, next card decides the winner!",
-      victoryMessage: undefined // Clear any previous victory message
+      m: "WAR! 3 cards face down, next card decides the winner!"
     };
   }
 
   // Normal turn resolution
   const winner = pc.v > cc.v ? 'p' : 'c';
-  const newState = {
-    ...state,
-    pc, cc,
-    w: false,
-    victoryMessage: undefined // Clear any previous victory message
-  };
-
   if (winner === 'p') {
-    newState.p.unshift(...cards);
-    newState.m = `You win with ${getCardLabel(pc.v)}!`;
+    state.p.unshift(...currentCards);
+    state.m = `You win with ${getCardLabel(pc.v)}!`;
   } else {
-    newState.c.unshift(...cards);
-    newState.m = `Computer wins with ${getCardLabel(cc.v)}!`;
+    state.c.unshift(...currentCards);
+    state.m = `Computer wins with ${getCardLabel(cc.v)}!`;
   }
   
-  return newState;
+  return {
+    ...state,
+    pc, cc,
+    w: false
+  };
 }
 
 // Add the compression function
