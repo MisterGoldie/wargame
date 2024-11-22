@@ -158,6 +158,11 @@ interface TokenHolding {
   balance: string;
   buyVolume: string;
   sellVolume: string;
+  subjectToken: {
+    name: string;
+    symbol: string;
+    currentPriceInMoxie: string;
+  };
 }
 
 interface PortfolioResponse {
@@ -209,6 +214,11 @@ async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | 
           balance
           buyVolume
           sellVolume
+          subjectToken {
+            name
+            symbol
+            currentPriceInMoxie
+          }
         }
       }
     }
@@ -222,12 +232,7 @@ async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | 
     const data = await graphQLClient.request<PortfolioResponse>(query, variables);
     console.log('Fan token data:', JSON.stringify(data, null, 2));
     
-    if (data?.users?.[0]?.portfolio) {
-      return data.users[0].portfolio;
-    }
-    
-    console.log('No portfolio found for addresses:', addresses.join(', '));
-    return null;
+    return data.users?.[0]?.portfolio || null;
   } catch (error) {
     console.error('Error fetching fan tokens:', error);
     return null;
