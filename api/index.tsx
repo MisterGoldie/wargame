@@ -153,12 +153,17 @@ async function getUserProfilePicture(fid: string): Promise<string | null> {
   }
 }
 
-// Add new types
+// Update TokenHolding interface
 interface TokenHolding {
-  // Add token holding properties
-  address: string;
   balance: string;
-  // Add other properties as needed
+  buyVolume: string;
+  sellVolume: string;
+}
+
+interface PortfolioResponse {
+  users: Array<{
+    portfolio: TokenHolding[];
+  }>;
 }
 
 // Add the API functions
@@ -196,9 +201,33 @@ async function getVestingContractAddress(beneficiaryAddresses: string[]): Promis
 
 async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | null> {
   const graphQLClient = new GraphQLClient(MOXIE_API_URL);
+  
+  const query = gql`
+    query MyQuery($userAddresses: [ID!]) {
+      users(where: { id_in: $userAddresses }) {
+        portfolio {
+          balance
+          buyVolume
+          sellVolume
+        }
+      }
+    }
+  `;
+  
   try {
-    // Implement fan tokens query
-    return null; // Placeholder
+    const variables = { 
+      userAddresses: addresses.map(addr => addr.toLowerCase()) 
+    };
+    
+    const data = await graphQLClient.request<PortfolioResponse>(query, variables);
+    console.log('Fan token data:', JSON.stringify(data, null, 2));
+    
+    if (data?.users?.[0]?.portfolio) {
+      return data.users[0].portfolio;
+    }
+    
+    console.log('No portfolio found for addresses:', addresses.join(', '));
+    return null;
   } catch (error) {
     console.error('Error fetching fan tokens:', error);
     return null;
@@ -243,7 +272,7 @@ async function getFarcasterAddressesFromFID(fid: string): Promise<string[]> {
   }
 }
 
-// Add fan token ownership check function
+// Update checkFanTokenOwnership to handle the new token data
 async function checkFanTokenOwnership(fid: string): Promise<FanTokenData> {
   try {
     const addresses = await getFarcasterAddressesFromFID(fid);
@@ -253,11 +282,7 @@ async function checkFanTokenOwnership(fid: string): Promise<FanTokenData> {
       return { ownsToken: false, balance: 0 };
     }
 
-    // Get vesting contract address if it exists
     const vestingAddress = await getVestingContractAddress(addresses);
-    console.log('Vesting contract address:', vestingAddress);
-
-    // Add vesting address to the addresses array if it exists
     const allAddresses = vestingAddress 
       ? [...addresses, vestingAddress]
       : addresses;
