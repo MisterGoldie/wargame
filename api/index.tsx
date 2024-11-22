@@ -251,6 +251,15 @@ interface FanTokenData {
 }
 
 // Add function to get Farcaster addresses from FID
+interface SocialsResponse {
+  Socials: {
+    Social: Array<{
+      userAddress: string;
+      userAssociatedAddresses: string[];
+    }>;
+  };
+}
+
 async function getFarcasterAddressesFromFID(fid: string): Promise<string[]> {
   const graphQLClient = new GraphQLClient(AIRSTACK_API_URL, {
     headers: {
@@ -259,7 +268,7 @@ async function getFarcasterAddressesFromFID(fid: string): Promise<string[]> {
   });
 
   const query = gql`
-    query GetAddresses($identity: Identity!) {
+    query MyQuery($identity: Identity!) {
       Socials(
         input: {
           filter: { dappName: { _eq: farcaster }, identity: { _eq: $identity } }
@@ -279,10 +288,9 @@ async function getFarcasterAddressesFromFID(fid: string): Promise<string[]> {
       identity: `fc_fid:${fid}`
     };
 
-    const data = await graphQLClient.request<any>(query, variables);
+    const data = await graphQLClient.request<SocialsResponse>(query, variables);
     console.log('Airstack API response:', JSON.stringify(data, null, 2));
 
-    // Collect unique addresses
     const addresses = new Set<string>();
 
     if (data?.Socials?.Social?.[0]) {
@@ -291,7 +299,7 @@ async function getFarcasterAddressesFromFID(fid: string): Promise<string[]> {
         addresses.add(social.userAddress.toLowerCase());
       }
       if (social.userAssociatedAddresses) {
-        social.userAssociatedAddresses.forEach((addr: string) => 
+        social.userAssociatedAddresses.forEach(addr => 
           addresses.add(addr.toLowerCase())
         );
       }
