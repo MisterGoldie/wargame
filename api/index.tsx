@@ -252,33 +252,98 @@ interface FanTokenData {
 
 // Add function to get Farcaster addresses from FID
 async function getFarcasterAddressesFromFID(fid: string): Promise<string[]> {
-  const query = `
-    query GetAddresses($fid: String!) {
-      Socials(
-        input: {filter: {dappName: {_eq: farcaster}, userId: {_eq: $fid}}, blockchain: ethereum}
+  const graphQLClient = new GraphQLClient(AIRSTACK_API_URL, {
+    headers: {
+      'Authorization': AIRSTACK_API_KEY,
+    },
+  });
+
+  const query = gql`
+    query GetAddresses($identity: Identity!) {
+      Wallet: Socials(
+        input: {
+          filter: { dappName: { _eq: farcaster }, identity: { _eq: $identity } }
+          blockchain: ethereum
+        }
       ) {
         Social {
+          userAddress
           userAssociatedAddresses
+          profileName
+        }
+      }
+      Poap: Poaps(
+        input: {
+          filter: { owner: { _eq: $identity } }
+        }
+      ) {
+        Poap {
+          owner {
+            addresses
+          }
+        }
+      }
+      TokenBalances: TokenBalances(
+        input: {
+          filter: { owner: { _eq: $identity } }
+        }
+      ) {
+        TokenBalance {
+          owner {
+            addresses
+          }
         }
       }
     }
   `;
 
   try {
-    const response = await fetch(AIRSTACK_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': AIRSTACK_API_KEY,
-      },
-      body: JSON.stringify({ query, variables: { fid } }),
+    const variables = {
+      identity: `fc_fid:${fid}`
+    };
+
+    const data = await graphQLClient.request<any>(query, variables);
+    console.log('Airstack API response:', JSON.stringify(data, null, 2));
+
+    // Collect addresses from all sources
+    const addresses = new Set<string>();
+
+    // Add addresses from Farcaster Social
+    if (data.Wallet?.Social?.[0]) {
+      const social = data.Wallet.Social[0];
+      if (social.userAddress) addresses.add(social.userAddress.toLowerCase());
+      if (social.userAssociatedAddresses) {
+        social.userAssociatedAddresses.forEach((addr: string) => 
+          addresses.add(addr.toLowerCase())
+        );
+      }
+    }
+
+    // Add addresses from POAPs
+    data.Poap?.Poap?.forEach((poap: any) => {
+      poap?.owner?.addresses?.forEach((addr: string) => 
+        addresses.add(addr.toLowerCase())
+      );
     });
 
-    const data = await response.json();
-    return data?.data?.Socials?.Social?.[0]?.userAssociatedAddresses || [];
+    // Add addresses from Token Balances
+    data.TokenBalances?.TokenBalance?.forEach((token: any) => {
+      token?.owner?.addresses?.forEach((addr: string) => 
+        addresses.add(addr.toLowerCase())
+      );
+    });
+
+    const addressArray = Array.from(addresses);
+    console.log('Found addresses:', addressArray);
+
+    if (addressArray.length === 0) {
+      throw new Error(`No addresses found for FID: ${fid}`);
+    }
+
+    return addressArray;
   } catch (error) {
-    console.error('Error fetching addresses:', error);
-    return [];
+    console.error('Error fetching Farcaster addresses from Airstack:', error);
+    throw error;
   }
 }
 
