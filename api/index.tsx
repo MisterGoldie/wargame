@@ -19,14 +19,12 @@ interface Card {
 }
 
 type GameState = {
-  p: Card[];
-  c: Card[];
-  pc: Card | null;
-  cc: Card | null;
-  w: Card[];
-  m: string;
-  g: 'i' | 'p' | 'w' | 'e';
-  iw: boolean;
+  p: Card[];    // player cards
+  c: Card[];    // computer cards
+  pc: Card | null;  // player current card
+  cc: Card | null;  // computer current card
+  m: string;    // message
+  w: boolean;   // is war
 };
 
 function getCardLabel(value: number): string {
@@ -40,7 +38,7 @@ function getCardLabel(value: number): string {
 }
 
 function createDeck(): Card[] {
-  const suits = ['c', 'd', 'h', 's'];
+  const suits = ['♠', '♣', '♥', '♦'];  // Using actual suit symbols
   const values = Array.from({ length: 13 }, (_, i) => i + 1);
   return shuffle(suits.flatMap(s => 
     values.map(v => ({ v, s }))
@@ -64,10 +62,8 @@ function initializeGame(): GameState {
     c: deck.slice(midpoint),       // computerDeck
     pc: null,                      // playerCard
     cc: null,                      // computerCard
-    w: [],                         // warPile
     m: 'Welcome to War! Draw a card to begin.',  // message
-    g: 'i',                        // gameStatus: initial
-    iw: false                      // isWar
+    w: false                       // isWar
   };
 }
 
@@ -159,54 +155,40 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
-  // Create a new state object
-  const newState = {
-    ...state,
-    p: [...state.p],
-    c: [...state.c],
-    w: [...state.w]
-  };
-
-  if (!newState.iw) {
-    newState.pc = newState.p.pop() || null;
-    newState.cc = newState.c.pop() || null;
-
-    if (newState.pc && newState.cc) {
-      if (newState.pc.v === newState.cc.v) {
-        newState.iw = true;
-        newState.g = 'w';
-        newState.w.push(newState.pc, newState.cc);
-        newState.m = "It's WAR! Draw again for the war!";
-      } else {
-        const winner = newState.pc.v > newState.cc.v ? 'player' : 'computer';
-        if (winner === 'player') {
-          newState.p.unshift(newState.pc, newState.cc);
-          newState.m = `You win this round! (${getCardLabel(newState.pc.v)} vs ${getCardLabel(newState.cc.v)})`;
-        } else {
-          newState.c.unshift(newState.pc, newState.cc);
-          newState.m = `Computer wins this round! (${getCardLabel(newState.pc.v)} vs ${getCardLabel(newState.cc.v)})`;
-        }
-      }
-    }
-  } else {
-    // Handle WAR
-    const warCards: Card[] = [];
-    for (let i = 0; i < 3; i++) {
-      const playerWarCard = newState.p.pop();
-      const computerWarCard = newState.c.pop();
-      if (playerWarCard && computerWarCard) {
-        warCards.push(playerWarCard, computerWarCard);
-      }
-    }
-    newState.w.push(...warCards);
-    newState.iw = false;
-    newState.g = 'p';
+  if (!state.p.length || !state.c.length) {
+    return {
+      ...state,
+      m: `Game Over! ${state.p.length ? 'You win!' : 'Computer wins!'}`,
+      w: false
+    };
   }
 
-  // Check for game overs
-  if (newState.p.length === 0 || newState.c.length === 0) {
-    newState.g = 'e';
-    newState.m = newState.p.length === 0 ? 'Game Over! Computer Wins!' : 'Game Over! You Win!';
+  const pc = state.p.pop()!;
+  const cc = state.c.pop()!;
+  const cards = [pc, cc];
+
+  if (pc.v === cc.v) {
+    return {
+      ...state,
+      pc, cc,
+      m: "WAR! Draw again!",
+      w: true
+    };
+  }
+
+  const winner = pc.v > cc.v ? 'p' : 'c';
+  const newState = {
+    ...state,
+    pc, cc,
+    w: false
+  };
+
+  if (winner === 'p') {
+    newState.p.unshift(...cards);
+    newState.m = `You win with ${getCardLabel(pc.v)} vs ${getCardLabel(cc.v)}!`;
+  } else {
+    newState.c.unshift(...cards);
+    newState.m = `Computer wins with ${getCardLabel(cc.v)} vs ${getCardLabel(pc.v)}!`;
   }
 
   return newState;
@@ -248,18 +230,14 @@ app.frame('/', (c) => {
 });
 
 app.frame('/game', async (c) => {
-  console.log('Button value:', c.buttonValue);
-  
   const { buttonValue } = c;
   let state: GameState;
 
   if (buttonValue?.startsWith('draw:')) {
     try {
       const encodedState = buttonValue.split(':')[1];
-      const decodedState = Buffer.from(encodedState, 'base64').toString();
-      console.log('Decoded state:', decodedState);
       state = encodedState 
-        ? handleTurn(JSON.parse(decodedState))
+        ? handleTurn(JSON.parse(Buffer.from(encodedState, 'base64').toString()))
         : initializeGame();
     } catch (error) {
       console.error('Error handling game state:', error);
@@ -268,7 +246,6 @@ app.frame('/game', async (c) => {
   } else {
     state = initializeGame();
   }
-  console.log('Current state:', state);
 
   const cardStyle = {
     display: 'flex',
@@ -359,13 +336,13 @@ app.frame('/game', async (c) => {
           {/* Message Area */}
           <div style={{
             fontSize: '36px',
-            color: state.iw ? '#ff4444' : 'white',
+            color: state.w ? '#ff4444' : 'white',
             textAlign: 'center'
           }}>
             {state.m}
           </div>
           
-          {state.iw && (
+          {state.w && (
             <div style={{ 
               fontSize: '64px',
               color: '#ff4444',
@@ -379,10 +356,10 @@ app.frame('/game', async (c) => {
     ),
     intents: [
       <Button 
-        action={state.g === 'e' ? '/' : undefined}
-        value={state.g !== 'e' ? `draw:${Buffer.from(JSON.stringify(state)).toString('base64')}` : undefined}
+        action={state.w ? '/' : undefined}
+        value={state.w ? `draw:${Buffer.from(JSON.stringify(state)).toString('base64')}` : undefined}
       >
-        {state.g === 'e' ? 'Play Again' : 'Draw Card'}
+        {state.w ? 'Play Again' : 'Draw Card'}
       </Button>
     ]
   });
