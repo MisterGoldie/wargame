@@ -502,46 +502,28 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
-  // Validate initial state
-  const initialTotal = state.p.length + state.c.length + 
-                    (state.pc ? 1 : 0) + (state.cc ? 1 : 0) + 
-                    (state.warPile?.length || 0);
-                    
-  console.log('Turn start:', {
-    total: initialTotal,
-    player: state.p.length,
-    cpu: state.c.length,
-    warPile: state.warPile?.length || 0,
-    inPlay: (state.pc ? 1 : 0) + (state.cc ? 1 : 0)
-  });
-
-  if (initialTotal !== 52) {
-    console.error('Invalid card count at turn start:', {
-      total: initialTotal,
-      expected: 52,
-      state: {
-        playerDeck: state.p.length,
-        cpuDeck: state.c.length,
-        playerCard: state.pc ? 1 : 0,
-        cpuCard: state.cc ? 1 : 0,
-        warPile: state.warPile?.length || 0
-      }
-    });
-  }
-
+  verifyCardCount(state, 'TURN_START');
+  
   const moveCount = (state.moveCount || 0) + 1;
   const shouldForceWar = moveCount % 12 === 0;
   
   // Draw cards
   const pc = state.p.pop()!;
   const cc = state.c.pop()!;
-  const forcedPc = shouldForceWar ? { ...pc, v: 10 } : pc;
-  const forcedCc = shouldForceWar ? { ...cc, v: 10 } : cc;
+  
+  // Verify after card draw
+  verifyCardCount({
+    ...state,
+    pc, cc,
+    p: state.p,
+    c: state.c
+  }, 'AFTER_DRAW');
 
   // War resolution
   if (state.w && state.warPile) {
-    const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
-    const allWarCards = [...state.warPile, forcedPc, forcedCc];
+    verifyCardCount(state, 'BEFORE_WAR_RESOLUTION');
+    const winner = pc.v > cc.v ? 'p' : 'c';
+    const allWarCards = [...state.warPile, pc, cc];
     
     console.log('War resolution:', {
       winner,
@@ -552,14 +534,14 @@ function handleTurn(state: GameState): GameState {
 
     const newState = {
       ...state,
-      pc: forcedPc,
-      cc: forcedCc,
+      pc: pc,
+      cc: cc,
       moveCount,
       w: false,
       warPile: undefined,
       m: winner === 'p' 
-        ? `You won the WAR with ${getCardLabel(forcedPc.v)}! (+${allWarCards.length} cards)` 
-        : `Computer won the WAR with ${getCardLabel(forcedCc.v)}! (+${allWarCards.length} cards)`,
+        ? `You won the WAR with ${getCardLabel(pc.v)}! (+${allWarCards.length} cards)` 
+        : `Computer won the WAR with ${getCardLabel(cc.v)}! (+${allWarCards.length} cards)`,
       victoryMessage: winner === 'p' ? '🎉 WAR VICTORY! 🎉' : '💔 WAR LOST! 💔'
     };
 
@@ -580,11 +562,12 @@ function handleTurn(state: GameState): GameState {
       });
     }
     
+    verifyCardCount(newState, 'AFTER_WAR_RESOLUTION');
     return newState;
   }
 
   // Check for war
-  if (forcedPc.v === forcedCc.v || shouldForceWar) {
+  if (pc.v === cc.v || shouldForceWar) {
     // Not enough cards check
     if (state.p.length < 3 || state.c.length < 3) {
       const winner = state.p.length >= state.c.length ? 'p' : 'c';
@@ -592,12 +575,12 @@ function handleTurn(state: GameState): GameState {
       
       return {
         ...state,
-        pc: forcedPc,
-        cc: forcedCc,
+        pc: pc,
+        cc: cc,
         moveCount,
         w: false,
-        p: winner === 'p' ? [...state.p, ...loserCards, forcedPc, forcedCc] : [],
-        c: winner === 'c' ? [...state.c, ...loserCards, forcedPc, forcedCc] : [],
+        p: winner === 'p' ? [...state.p, ...loserCards, pc, cc] : [],
+        c: winner === 'c' ? [...state.c, ...loserCards, pc, cc] : [],
         m: `Not enough cards for war! ${winner === 'p' ? 'You' : 'Computer'} wins all remaining cards!`,
         victoryMessage: winner === 'p' 
           ? "🎉 Victory - Opponent can't continue! 🎉" 
@@ -611,12 +594,12 @@ function handleTurn(state: GameState): GameState {
     
     return {
       ...state,
-      pc: forcedPc,
-      cc: forcedCc,
+      pc: pc,
+      cc: cc,
       moveCount,
       w: true,
       warPile: [
-        forcedPc, forcedCc,  // Current face-up cards
+        pc, cc,  // Current face-up cards
         ...pWarCards.map(c => ({...c, hidden: true})),
         ...cWarCards.map(c => ({...c, hidden: true}))
       ],
@@ -626,20 +609,22 @@ function handleTurn(state: GameState): GameState {
   }
 
   // Normal turn
-  const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
-  return {
+  const winner = pc.v > cc.v ? 'p' : 'c';
+  const newState = {
     ...state,
-    pc: forcedPc,
-    cc: forcedCc,
+    pc: pc,
+    cc: cc,
     moveCount,
     w: false,
-    p: winner === 'p' ? [...state.p, forcedPc, forcedCc] : state.p,
-    c: winner === 'c' ? [...state.c, forcedPc, forcedCc] : state.c,
+    p: winner === 'p' ? [...state.p, pc, cc] : state.p,
+    c: winner === 'c' ? [...state.c, pc, cc] : state.c,
     m: winner === 'p' 
-      ? `You win with ${getCardLabel(forcedPc.v)}!` 
-      : `Computer wins with ${getCardLabel(forcedCc.v)}!`,
+      ? `You win with ${getCardLabel(pc.v)}!` 
+      : `Computer wins with ${getCardLabel(cc.v)}!`,
     victoryMessage: undefined
   };
+  verifyCardCount(newState, 'TURN_COMPLETE');
+  return newState;
 }
 
 // Add the compression function
@@ -1074,4 +1059,45 @@ function isOnCooldown(lastDrawTime: number | undefined): boolean {
   const cooldownPeriod = 1000; // 1 second cooldown
   const currentTime = Date.now();
   return currentTime - lastDrawTime < cooldownPeriod;
+}
+
+function verifyCardCount(state: GameState, location: string): boolean {
+  // Calculate card counts
+  const cardCounts = {
+    playerDeck: state.p.length,
+    cpuDeck: state.c.length,
+    warPile: state.warPile?.length || 0,
+    inPlay: (state.pc ? 1 : 0) + (state.cc ? 1 : 0)
+  };
+  
+  const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0);
+
+  // Basic validation
+  const isValid = totalCards === 52;
+
+  // Log state details
+  console.log(`🃏 ${location}:`, {
+    total: totalCards,
+    breakdown: cardCounts,
+    gameState: {
+      isWar: state.w,
+      moveCount: state.moveCount || 0
+    }
+  });
+
+  if (!isValid) {
+    console.error(`❌ Card count error at ${location}:`, {
+      total: totalCards,
+      expected: 52,
+      missing: 52 - totalCards,
+      breakdown: cardCounts,
+      message: state.m
+    });
+    
+    if (process.env.NODE_ENV === 'development') {
+      throw new Error(`Invalid card count at ${location}: ${totalCards}`);
+    }
+  }
+
+  return isValid;
 }
