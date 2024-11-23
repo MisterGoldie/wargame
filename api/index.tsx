@@ -532,16 +532,25 @@ function handleTurn(state: GameState): GameState {
       warPile: []
     };
 
+    // Calculate war cards: 2 face up + 6 face down = 8 total
+    const warCards = new Array(8).fill({ v: 1, s: '♠' }); // Placeholder cards
+
     if (winner === 'p') {
-      // Player wins war - add 8 to player's deck
-      newState.p = [...newState.p, ...Array(8)];
-      // Remove 4 from CPU's deck
-      newState.c = newState.c.slice(0, newState.c.length - 4);
+      // Player wins war
+      newState.p = [...newState.p, ...warCards]; // Add 8 cards to player
+      newState.c = newState.c.slice(0, Math.max(0, newState.c.length - 4)); // Remove 4 from CPU
+      console.log('War won by player:', {
+        playerCardsAfter: newState.p.length,
+        cpuCardsAfter: newState.c.length
+      });
     } else {
-      // CPU wins war - add 8 to CPU's deck
-      newState.c = [...newState.c, ...Array(8)];
-      // Remove 4 from player's deck
-      newState.p = newState.p.slice(0, newState.p.length - 4);
+      // CPU wins war
+      newState.c = [...newState.c, ...warCards]; // Add 8 cards to CPU
+      newState.p = newState.p.slice(0, Math.max(0, newState.p.length - 4)); // Remove 4 from player
+      console.log('War won by CPU:', {
+        playerCardsAfter: newState.p.length,
+        cpuCardsAfter: newState.c.length
+      });
     }
 
     return newState;
