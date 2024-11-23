@@ -536,7 +536,7 @@ function handleTurn(state: GameState): GameState {
       // Player wins war
       const cardsToTransfer = state.c.slice(-4); // Take 4 cards from CPU
       newState.p = [...newState.p, ...cardsToTransfer, ...state.warPile]; // Add war pile + 4 CPU cards
-      newState.c = state.c.slice(0, -4); // Remove those 4 cards from CPU
+      newState.c = state.c.slice(0, -4); // Remove those 4 cards from CPU HAND
     } else {
       // CPU wins war
       const cardsToTransfer = state.p.slice(-4); // Take 4 cards from player
