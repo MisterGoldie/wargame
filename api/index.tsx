@@ -334,6 +334,8 @@ async function getVestingContractAddress(beneficiaryAddresses: string[]): Promis
 
 async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | null> {
   const graphQLClient = new GraphQLClient(MOXIE_API_URL);
+  const DELAY_MS = 5000; // 5 second delay
+  const MAX_RETRIES = 3;
   
   const query = gql`
     query MyQuery($userAddresses: [ID!]) {
@@ -351,25 +353,58 @@ async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | 
       }
     }
   `;
-  
-  try {
-    const variables = { 
-      userAddresses: addresses.map(addr => addr.toLowerCase()) 
-    };
-    
-    const data = await graphQLClient.request<PortfolioResponse>(query, variables);
-    console.log('Fan token data:', JSON.stringify(data, null, 2));
-    
-    // Filter for only the /thepod token
-    const podTokens = data.users?.[0]?.portfolio?.filter(token => 
-      token.subjectToken.symbol === "cid:thepod"
-    ) || null;
 
-    return podTokens;
-  } catch (error) {
-    console.error('Error fetching fan tokens:', error);
-    return null;
+  const variables = { 
+    userAddresses: addresses.map(addr => addr.toLowerCase()) 
+  };
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      // Log attempt number if not first try
+      if (attempt > 1) {
+        console.log(`Retry attempt ${attempt}/${MAX_RETRIES} for addresses:`, addresses);
+      }
+
+      // Add delay before request (skip first attempt)
+      if (attempt > 1) {
+        console.log(`Waiting ${DELAY_MS}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+      }
+      
+      const data = await graphQLClient.request<PortfolioResponse>(query, variables);
+      console.log('Fan token API response:', {
+        addresses,
+        portfolioSize: data.users?.[0]?.portfolio?.length || 0
+      });
+      
+      // Filter for /thepod token
+      const podTokens = data.users?.[0]?.portfolio?.filter(token => 
+        token.subjectToken.symbol === "cid:thepod"
+      ) || null;
+
+      if (podTokens) {
+        console.log('Found pod tokens:', podTokens.length);
+        return podTokens;
+      }
+
+      console.log('No pod tokens found in portfolio');
+      return null;
+
+    } catch (error) {
+      console.error(`Attempt ${attempt}/${MAX_RETRIES} failed:`, {
+        error,
+        addresses
+      });
+
+      // Only throw on last attempt
+      if (attempt === MAX_RETRIES) {
+        console.error('All retry attempts failed');
+        return null;
+      }
+    }
   }
+
+  return null; // Typescript needs this even though it's unreachable
 }
 
 // Add new interfaces
