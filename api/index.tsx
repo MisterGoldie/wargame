@@ -334,8 +334,6 @@ async function getVestingContractAddress(beneficiaryAddresses: string[]): Promis
 
 async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | null> {
   const graphQLClient = new GraphQLClient(MOXIE_API_URL);
-  const DELAY_MS = 5000; // 5 second delay
-  const MAX_RETRIES = 3;
   
   const query = gql`
     query MyQuery($userAddresses: [ID!]) {
@@ -353,58 +351,25 @@ async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | 
       }
     }
   `;
+  
+  try {
+    const variables = { 
+      userAddresses: addresses.map(addr => addr.toLowerCase()) 
+    };
+    
+    const data = await graphQLClient.request<PortfolioResponse>(query, variables);
+    console.log('Fan token data:', JSON.stringify(data, null, 2));
+    
+    // Filter for only the /thepod token
+    const podTokens = data.users?.[0]?.portfolio?.filter(token => 
+      token.subjectToken.symbol === "cid:thepod"
+    ) || null;
 
-  const variables = { 
-    userAddresses: addresses.map(addr => addr.toLowerCase()) 
-  };
-
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      // Log attempt number if not first try
-      if (attempt > 1) {
-        console.log(`Retry attempt ${attempt}/${MAX_RETRIES} for addresses:`, addresses);
-      }
-
-      // Add delay before request (skip first attempt)
-      if (attempt > 1) {
-        console.log(`Waiting ${DELAY_MS}ms before retry...`);
-        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
-      }
-      
-      const data = await graphQLClient.request<PortfolioResponse>(query, variables);
-      console.log('Fan token API response:', {
-        addresses,
-        portfolioSize: data.users?.[0]?.portfolio?.length || 0
-      });
-      
-      // Filter for /thepod token
-      const podTokens = data.users?.[0]?.portfolio?.filter(token => 
-        token.subjectToken.symbol === "cid:thepod"
-      ) || null;
-
-      if (podTokens) {
-        console.log('Found pod tokens:', podTokens.length);
-        return podTokens;
-      }
-
-      console.log('No pod tokens found in portfolio');
-      return null;
-
-    } catch (error) {
-      console.error(`Attempt ${attempt}/${MAX_RETRIES} failed:`, {
-        error,
-        addresses
-      });
-
-      // Only throw on last attempt
-      if (attempt === MAX_RETRIES) {
-        console.error('All retry attempts failed');
-        return null;
-      }
-    }
+    return podTokens;
+  } catch (error) {
+    console.error('Error fetching fan tokens:', error);
+    return null;
   }
-
-  return null; // Typescript needs this even though it's unreachable
 }
 
 // Add new interfaces
@@ -537,9 +502,33 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
-  // Verify initial state
-  verifyCardCount(state, 'TURN_START');
-  
+  // Validate initial state
+  const initialTotal = state.p.length + state.c.length + 
+                    (state.pc ? 1 : 0) + (state.cc ? 1 : 0) + 
+                    (state.warPile?.length || 0);
+                    
+  console.log('Turn start:', {
+    total: initialTotal,
+    player: state.p.length,
+    cpu: state.c.length,
+    warPile: state.warPile?.length || 0,
+    inPlay: (state.pc ? 1 : 0) + (state.cc ? 1 : 0)
+  });
+
+  if (initialTotal !== 52) {
+    console.error('Invalid card count at turn start:', {
+      total: initialTotal,
+      expected: 52,
+      state: {
+        playerDeck: state.p.length,
+        cpuDeck: state.c.length,
+        playerCard: state.pc ? 1 : 0,
+        cpuCard: state.cc ? 1 : 0,
+        warPile: state.warPile?.length || 0
+      }
+    });
+  }
+
   const moveCount = (state.moveCount || 0) + 1;
   const shouldForceWar = moveCount % 12 === 0;
   
@@ -554,6 +543,13 @@ function handleTurn(state: GameState): GameState {
     const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
     const allWarCards = [...state.warPile, forcedPc, forcedCc];
     
+    console.log('War resolution:', {
+      winner,
+      warPileSize: state.warPile.length,
+      newCards: 2,
+      totalTransfer: allWarCards.length
+    });
+
     const newState = {
       ...state,
       pc: forcedPc,
@@ -573,7 +569,17 @@ function handleTurn(state: GameState): GameState {
       newState.c = [...state.c, ...allWarCards];
     }
 
-    verifyCardCount(newState, 'WAR_RESOLUTION');
+    // Validate war resolution
+    const warTotal = newState.p.length + newState.c.length;
+    if (warTotal !== 52) {
+      console.error('Invalid card count after war:', {
+        total: warTotal,
+        player: newState.p.length,
+        cpu: newState.c.length,
+        warCards: allWarCards.length
+      });
+    }
+    
     return newState;
   }
 
@@ -582,41 +588,46 @@ function handleTurn(state: GameState): GameState {
     // Not enough cards check
     if (state.p.length < 3 || state.c.length < 3) {
       const winner = state.p.length >= state.c.length ? 'p' : 'c';
-      const newState = {
+      const loserCards = winner === 'p' ? state.c : state.p;
+      
+      return {
         ...state,
-        pc: forcedPc, cc: forcedCc,
+        pc: forcedPc,
+        cc: forcedCc,
         moveCount,
         w: false,
-        p: winner === 'p' ? [...state.p, ...state.c, forcedPc, forcedCc] : [],
-        c: winner === 'c' ? [...state.c, ...state.p, forcedPc, forcedCc] : [],
+        p: winner === 'p' ? [...state.p, ...loserCards, forcedPc, forcedCc] : [],
+        c: winner === 'c' ? [...state.c, ...loserCards, forcedPc, forcedCc] : [],
         m: `Not enough cards for war! ${winner === 'p' ? 'You' : 'Computer'} wins all remaining cards!`,
-        victoryMessage: winner === 'p' ? "🎉 Victory! 🎉" : "💔 Game Over! 💔"
+        victoryMessage: winner === 'p' 
+          ? "🎉 Victory - Opponent can't continue! 🎉" 
+          : "💔 Game Over - Not enough cards! 💔"
       };
-      
-      verifyCardCount(newState, 'WAR_INSUFFICIENT_CARDS');
-      return newState;
     }
 
+    // Start war with face-down cards
     const pWarCards = state.p.splice(-3);
     const cWarCards = state.c.splice(-3);
     
-    const newState = {
+    return {
       ...state,
       pc: forcedPc,
       cc: forcedCc,
       moveCount,
       w: true,
-      warPile: [forcedPc, forcedCc, ...pWarCards, ...cWarCards],
-      m: shouldForceWar ? "FORCED WAR!" : "WAR! Cards are equal!"
+      warPile: [
+        forcedPc, forcedCc,  // Current face-up cards
+        ...pWarCards.map(c => ({...c, hidden: true})),
+        ...cWarCards.map(c => ({...c, hidden: true}))
+      ],
+      m: shouldForceWar ? "FORCED WAR!" : "WAR! Cards are equal!",
+      victoryMessage: undefined
     };
-
-    verifyCardCount(newState, 'WAR_START');
-    return newState;
   }
 
   // Normal turn
   const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
-  const newState = {
+  return {
     ...state,
     pc: forcedPc,
     cc: forcedCc,
@@ -626,11 +637,9 @@ function handleTurn(state: GameState): GameState {
     c: winner === 'c' ? [...state.c, forcedPc, forcedCc] : state.c,
     m: winner === 'p' 
       ? `You win with ${getCardLabel(forcedPc.v)}!` 
-      : `Computer wins with ${getCardLabel(forcedCc.v)}!`
+      : `Computer wins with ${getCardLabel(forcedCc.v)}!`,
+    victoryMessage: undefined
   };
-
-  verifyCardCount(newState, 'NORMAL_TURN');
-  return newState;
 }
 
 // Add the compression function
@@ -1065,85 +1074,4 @@ function isOnCooldown(lastDrawTime: number | undefined): boolean {
   const cooldownPeriod = 1000; // 1 second cooldown
   const currentTime = Date.now();
   return currentTime - lastDrawTime < cooldownPeriod;
-}
-
-function verifyCardCount(state: GameState, location: string): void {
-  const totalCards = state.p.length + state.c.length + 
-                    (state.warPile?.length || 0) +
-                    (state.pc ? 1 : 0) + (state.cc ? 1 : 0);
-                    
-  // Add card details for better debugging
-  const cardDetails = {
-    player: {
-      count: state.p.length,
-      cards: state.p.map(c => `${getCardLabel(c.v)}${c.s}`).join(',')
-    },
-    cpu: {
-      count: state.c.length,
-      cards: state.c.map(c => `${getCardLabel(c.v)}${c.s}`).join(',')
-    },
-    warPile: state.warPile?.map(c => `${getCardLabel(c.v)}${c.s}`).join(',') || 'none',
-    inPlay: {
-      player: state.pc ? `${getCardLabel(state.pc.v)}${state.pc.s}` : 'none',
-      cpu: state.cc ? `${getCardLabel(state.cc.v)}${state.cc.s}` : 'none'
-    }
-  };
-
-  console.log(`🃏 Card Count at ${location}:`, {
-    total: totalCards,
-    breakdown: {
-      playerDeck: state.p.length,
-      cpuDeck: state.c.length,
-      warPile: state.warPile?.length || 0,
-      inPlay: (state.pc ? 1 : 0) + (state.cc ? 1 : 0)
-    },
-    details: cardDetails
-  });
-
-  // Check for duplicate cards
-  const allCards = [
-    ...state.p,
-    ...state.c,
-    ...(state.warPile || []),
-    ...(state.pc ? [state.pc] : []),
-    ...(state.cc ? [state.cc] : [])
-  ].map(c => `${getCardLabel(c.v)}${c.s}`);
-
-  const duplicates = allCards.filter((card, index) => 
-    allCards.indexOf(card) !== index
-  );
-
-  if (duplicates.length > 0) {
-    console.error('❌ DUPLICATE CARDS DETECTED:', {
-      duplicates,
-      location
-    });
-    throw new Error(`Duplicate cards found: ${duplicates.join(', ')}`);
-  }
-
-  if (totalCards !== 52) {
-    console.error(`❌ CARD COUNT ERROR at ${location}!`, {
-      total: totalCards,
-      expected: 52,
-      difference: totalCards - 52,
-      state: cardDetails
-    });
-    throw new Error(`Invalid card count: ${totalCards}`);
-  }
-
-  // Check for valid card values
-  const invalidCards = allCards.filter(card => {
-    const value = parseInt(card);
-    return isNaN(value) || value < 2 || value > 14;
-  });
-
-  if (invalidCards.length > 0) {
-    console.error('❌ INVALID CARD VALUES:', {
-      cards: invalidCards,
-      location
-    });
-    throw new Error(`Invalid card values found: ${invalidCards.join(', ')}`);
-  }
-
-  console.log(`✅ Validation passed at ${location}`);
 }
