@@ -504,122 +504,121 @@ app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
   console.log('Starting turn handling');
   
-  // Game over check
+  // Game over check first
   if (!state.p.length || !state.c.length) {
     return {
       ...state,
       m: `Game Over! ${state.p.length ? 'You win!' : 'Computer wins!'}`,
-      w: false
+      w: false,
+      victoryMessage: state.p.length ? '🎉 VICTORY! 🎉' : '💔 DEFEAT! 💔'
     };
   }
 
   const moveCount = (state.moveCount || 0) + 1;
-  const shouldForceWar = moveCount % 12 === 0;
+  console.log('Move:', moveCount, 'Force war:', moveCount % 12 === 0);
   
   // Draw cards
   const pc = state.p.pop()!;
   const cc = state.c.pop()!;
   
-  // War resolution (handle existing war first)
+  // Force war cards if needed
+  const forcedPc = moveCount % 12 === 0 ? { ...pc, v: 10 } : pc;
+  const forcedCc = moveCount % 12 === 0 ? { ...cc, v: 10 } : cc;
+
+  // War resolution
   if (state.w && state.warPile) {
-    const winner = pc.v > cc.v ? 'p' : 'c';
-    const allWarCards = [...state.warPile, pc, cc];
+    const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
+    const allWarCards = [...state.warPile, forcedPc, forcedCc];
     
     console.log('War resolution:', {
       winner,
-      warPileSize: state.warPile.length,
-      totalCards: allWarCards.length,
-      decidingCards: { player: pc.v, cpu: cc.v }
+      decidingCards: { player: forcedPc.v, cpu: forcedCc.v },
+      totalCards: allWarCards.length
     });
 
     const newState = {
       ...state,
-      pc, cc,
-      w: false,
+      pc: forcedPc,
+      cc: forcedCc,
       moveCount,
+      w: false,
+      warPile: [],
       m: winner === 'p' 
-        ? `You won the WAR with ${getCardLabel(pc.v)}! (+${allWarCards.length} cards)` 
-        : `Computer won the WAR with ${getCardLabel(cc.v)}! (+${allWarCards.length} cards)`,
-      victoryMessage: winner === 'p' 
-        ? '🎉 WAR VICTORY! 🎉' 
-        : '💔 WAR LOST! 💔',
-      warPile: []
+        ? `You won the WAR with ${getCardLabel(forcedPc.v)}! (+${allWarCards.length} cards)` 
+        : `Computer won the WAR with ${getCardLabel(forcedCc.v)}! (+${allWarCards.length} cards)`,
+      victoryMessage: winner === 'p' ? '🎉 WAR VICTORY! 🎉' : '💔 WAR LOST! 💔'
     };
 
-    // Transfer all war cards to winner
+    // Winner gets all cards
     if (winner === 'p') {
       newState.p = [...newState.p, ...allWarCards];
     } else {
       newState.c = [...newState.c, ...allWarCards];
     }
-    
+
     return newState;
   }
 
   // Check for new war
-  if (pc.v === cc.v || shouldForceWar) {
-    console.log('War initiated!', { 
-      cardValues: { player: pc.v, cpu: cc.v }, 
-      forced: shouldForceWar,
-      playerCards: state.p.length,
-      cpuCards: state.c.length
-    });
-    
-    // Check for enough cards
+  if (forcedPc.v === forcedCc.v) {
+    // Not enough cards check
     if (state.p.length < 3 || state.c.length < 3) {
       const winner = state.p.length >= state.c.length ? 'p' : 'c';
-      const losingCards = winner === 'p' ? state.c : state.p;
+      const loserCards = winner === 'p' ? state.c : state.p;
       
       return {
         ...state,
-        pc, cc,
+        pc: forcedPc,
+        cc: forcedCc,
         moveCount,
         w: false,
-        p: winner === 'p' ? [...state.p, ...losingCards, pc, cc] : [],
-        c: winner === 'c' ? [...state.c, ...losingCards, pc, cc] : [],
-        m: `Not enough cards for war! ${winner === 'p' ? 'You' : 'Computer'} wins!`,
+        p: winner === 'p' ? [...state.p, ...loserCards, forcedPc, forcedCc] : [],
+        c: winner === 'c' ? [...state.c, ...loserCards, forcedPc, forcedCc] : [],
+        m: `Not enough cards for war! ${winner === 'p' ? 'You' : 'Computer'} wins all remaining cards!`,
         victoryMessage: winner === 'p' 
           ? "🎉 Victory - Opponent can't continue! 🎉" 
           : "💔 Game Over - Not enough cards! 💔"
       };
     }
 
-    // Draw war cards
+    // Start war
     const pWarCards = state.p.splice(-3);
     const cWarCards = state.c.splice(-3);
     
     return {
       ...state,
-      pc, cc,
+      pc: forcedPc,
+      cc: forcedCc,
       moveCount,
       w: true,
       warPile: [
-        pc, cc,  // Current cards that initiated war
+        forcedPc, forcedCc,
         ...pWarCards.map(c => ({...c, hidden: true})),
         ...cWarCards.map(c => ({...c, hidden: true}))
       ],
-      m: shouldForceWar ? "FORCED WAR!" : "WAR! Cards are equal!",
+      m: moveCount % 12 === 0 ? "FORCED WAR!" : "WAR! Cards are equal!",
       victoryMessage: undefined
     };
   }
 
   // Normal turn resolution
-  const winner = pc.v > cc.v ? 'p' : 'c';
+  const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
   const newState = {
     ...state,
-    pc, cc,
+    pc: forcedPc,
+    cc: forcedCc,
     moveCount,
     w: false,
     m: winner === 'p' 
-      ? `You win with ${getCardLabel(pc.v)}!` 
-      : `Computer wins with ${getCardLabel(cc.v)}!`,
+      ? `You win with ${getCardLabel(forcedPc.v)}!` 
+      : `Computer wins with ${getCardLabel(forcedCc.v)}!`,
     victoryMessage: undefined
   };
 
   if (winner === 'p') {
-    newState.p = [...newState.p, pc, cc];
+    newState.p = [...newState.p, forcedPc, forcedCc];
   } else {
-    newState.c = [...newState.c, pc, cc];
+    newState.c = [...newState.c, forcedPc, forcedCc];
   }
   
   return newState;
