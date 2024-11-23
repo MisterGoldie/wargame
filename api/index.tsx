@@ -518,11 +518,6 @@ function handleTurn(state: GameState): GameState {
 
   // War resolution
   if (state.w && state.warPile) {
-    console.log('Resolving war', {
-      playerCard: pc.v,
-      cpuCard: cc.v,
-      warPileSize: state.warPile.length
-    });
     const winner = pc.v > cc.v ? 'p' : 'c';
     const newState = {
       ...state,
@@ -538,14 +533,14 @@ function handleTurn(state: GameState): GameState {
     };
 
     if (winner === 'p') {
-      // Player wins - add 8 cards to player's deck
+      // Player wins war - add 8 to player's deck
       newState.p = [...newState.p, ...Array(8)];
-      // Remove 4 cards from CPU's deck
+      // Remove 4 from CPU's deck
       newState.c = newState.c.slice(0, newState.c.length - 4);
     } else {
-      // CPU wins - add 8 cards to CPU's deck
+      // CPU wins war - add 8 to CPU's deck
       newState.c = [...newState.c, ...Array(8)];
-      // Remove 4 cards from player's deck
+      // Remove 4 from player's deck
       newState.p = newState.p.slice(0, newState.p.length - 4);
     }
 
