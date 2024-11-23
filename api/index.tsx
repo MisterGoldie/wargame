@@ -502,9 +502,9 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
-  console.log('Starting turn handling');
+  const moveCount = (state.moveCount || 0) + 1;
   
-  // Game over check first
+  // Game over check
   if (!state.p.length || !state.c.length) {
     return {
       ...state,
@@ -514,16 +514,13 @@ function handleTurn(state: GameState): GameState {
     };
   }
 
-  const moveCount = (state.moveCount || 0) + 1;
-  console.log('Move:', moveCount, 'Force war:', moveCount % 12 === 0);
+  const shouldForceWar = moveCount % 12 === 0;
   
   // Draw cards
   const pc = state.p.pop()!;
   const cc = state.c.pop()!;
-  
-  // Force war cards if needed
-  const forcedPc = moveCount % 12 === 0 ? { ...pc, v: 10 } : pc;
-  const forcedCc = moveCount % 12 === 0 ? { ...cc, v: 10 } : cc;
+  const forcedPc = shouldForceWar ? { ...pc, v: 10 } : pc;
+  const forcedCc = shouldForceWar ? { ...cc, v: 10 } : cc;
 
   // War resolution
   if (state.w && state.warPile) {
@@ -549,18 +546,18 @@ function handleTurn(state: GameState): GameState {
       victoryMessage: winner === 'p' ? '🎉 WAR VICTORY! 🎉' : '💔 WAR LOST! 💔'
     };
 
-    // Winner gets all cards
+    // Use spread operator instead of push for immutability
     if (winner === 'p') {
-      newState.p = [...newState.p, ...allWarCards];
+      newState.p = [...state.p, ...allWarCards];
     } else {
-      newState.c = [...newState.c, ...allWarCards];
+      newState.c = [...state.c, ...allWarCards];
     }
-
+    
     return newState;
   }
 
-  // Check for new war
-  if (forcedPc.v === forcedCc.v) {
+  // Check for war
+  if (forcedPc.v === forcedCc.v || shouldForceWar) {
     // Not enough cards check
     if (state.p.length < 3 || state.c.length < 3) {
       const winner = state.p.length >= state.c.length ? 'p' : 'c';
@@ -581,7 +578,7 @@ function handleTurn(state: GameState): GameState {
       };
     }
 
-    // Start war
+    // Start war with face-down cards
     const pWarCards = state.p.splice(-3);
     const cWarCards = state.c.splice(-3);
     
@@ -592,36 +589,30 @@ function handleTurn(state: GameState): GameState {
       moveCount,
       w: true,
       warPile: [
-        forcedPc, forcedCc,
+        forcedPc, forcedCc,  // Current face-up cards
         ...pWarCards.map(c => ({...c, hidden: true})),
         ...cWarCards.map(c => ({...c, hidden: true}))
       ],
-      m: moveCount % 12 === 0 ? "FORCED WAR!" : "WAR! Cards are equal!",
+      m: shouldForceWar ? "FORCED WAR!" : "WAR! Cards are equal!",
       victoryMessage: undefined
     };
   }
 
-  // Normal turn resolution
+  // Normal turn
   const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
-  const newState = {
+  return {
     ...state,
     pc: forcedPc,
     cc: forcedCc,
     moveCount,
     w: false,
+    p: winner === 'p' ? [...state.p, forcedPc, forcedCc] : state.p,
+    c: winner === 'c' ? [...state.c, forcedPc, forcedCc] : state.c,
     m: winner === 'p' 
       ? `You win with ${getCardLabel(forcedPc.v)}!` 
       : `Computer wins with ${getCardLabel(forcedCc.v)}!`,
     victoryMessage: undefined
   };
-
-  if (winner === 'p') {
-    newState.p = [...newState.p, forcedPc, forcedCc];
-  } else {
-    newState.c = [...newState.c, forcedPc, forcedCc];
-  }
-  
-  return newState;
 }
 
 // Add the compression function
