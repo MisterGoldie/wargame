@@ -531,17 +531,17 @@ function handleTurn(state: GameState): GameState {
         : '💔 DEFEATED IN BATTLE! 💔',
       warPile: []
     };
-    // Create arrays for the card adjustments
-    const addCards = Array.from({ length: 8 }, () => ({ v: 1, s: '♠' }));
-    
+
     if (winner === 'p') {
       // Player wins war
-      newState.p = [...newState.p, ...addCards];  // Add 8 cards
-      newState.c = newState.c.slice(0, -4);       // Remove 4 cards from CPU
+      const cardsToTransfer = state.c.slice(-4); // Take 4 cards from CPU
+      newState.p = [...newState.p, ...cardsToTransfer, ...state.warPile]; // Add war pile + 4 CPU cards
+      newState.c = state.c.slice(0, -4); // Remove those 4 cards from CPU
     } else {
       // CPU wins war
-      newState.c = [...newState.c, ...addCards];  // Add 8 cards
-      newState.p = newState.p.slice(0, -4);       // Remove 4 cards from player
+      const cardsToTransfer = state.p.slice(-4); // Take 4 cards from player
+      newState.c = [...newState.c, ...cardsToTransfer, ...state.warPile]; // Add war pile + 4 player cards
+      newState.p = state.p.slice(0, -4); // Remove those 4 cards from player
     }
 
     console.log('War resolution:', {
@@ -549,7 +549,8 @@ function handleTurn(state: GameState): GameState {
       playerCardsBefore: state.p.length,
       cpuCardsBefore: state.c.length,
       playerCardsAfter: newState.p.length,
-      cpuCardsAfter: newState.c.length
+      cpuCardsAfter: newState.c.length,
+      warPileSize: state.warPile.length
     });
 
     return newState;
