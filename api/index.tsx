@@ -502,18 +502,34 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
-  const moveCount = (state.moveCount || 0) + 1;
-  
-  // Game over check
-  if (!state.p.length || !state.c.length) {
-    return {
-      ...state,
-      m: `Game Over! ${state.p.length ? 'You win!' : 'Computer wins!'}`,
-      w: false,
-      victoryMessage: state.p.length ? '🎉 VICTORY! 🎉' : '💔 DEFEAT! 💔'
-    };
+  // Validate initial state
+  const initialTotal = state.p.length + state.c.length + 
+                    (state.pc ? 1 : 0) + (state.cc ? 1 : 0) + 
+                    (state.warPile?.length || 0);
+                    
+  console.log('Turn start:', {
+    total: initialTotal,
+    player: state.p.length,
+    cpu: state.c.length,
+    warPile: state.warPile?.length || 0,
+    inPlay: (state.pc ? 1 : 0) + (state.cc ? 1 : 0)
+  });
+
+  if (initialTotal !== 52) {
+    console.error('Invalid card count at turn start:', {
+      total: initialTotal,
+      expected: 52,
+      state: {
+        playerDeck: state.p.length,
+        cpuDeck: state.c.length,
+        playerCard: state.pc ? 1 : 0,
+        cpuCard: state.cc ? 1 : 0,
+        warPile: state.warPile?.length || 0
+      }
+    });
   }
 
+  const moveCount = (state.moveCount || 0) + 1;
   const shouldForceWar = moveCount % 12 === 0;
   
   // Draw cards
@@ -529,8 +545,9 @@ function handleTurn(state: GameState): GameState {
     
     console.log('War resolution:', {
       winner,
-      decidingCards: { player: forcedPc.v, cpu: forcedCc.v },
-      totalCards: allWarCards.length
+      warPileSize: state.warPile.length,
+      newCards: 2,
+      totalTransfer: allWarCards.length
     });
 
     const newState = {
@@ -539,18 +556,28 @@ function handleTurn(state: GameState): GameState {
       cc: forcedCc,
       moveCount,
       w: false,
-      warPile: [],
+      warPile: undefined,
       m: winner === 'p' 
         ? `You won the WAR with ${getCardLabel(forcedPc.v)}! (+${allWarCards.length} cards)` 
         : `Computer won the WAR with ${getCardLabel(forcedCc.v)}! (+${allWarCards.length} cards)`,
       victoryMessage: winner === 'p' ? '🎉 WAR VICTORY! 🎉' : '💔 WAR LOST! 💔'
     };
 
-    // Use spread operator instead of push for immutability
     if (winner === 'p') {
       newState.p = [...state.p, ...allWarCards];
     } else {
       newState.c = [...state.c, ...allWarCards];
+    }
+
+    // Validate war resolution
+    const warTotal = newState.p.length + newState.c.length;
+    if (warTotal !== 52) {
+      console.error('Invalid card count after war:', {
+        total: warTotal,
+        player: newState.p.length,
+        cpu: newState.c.length,
+        warCards: allWarCards.length
+      });
     }
     
     return newState;
