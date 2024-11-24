@@ -615,18 +615,48 @@ function handleTurn(state: GameState): GameState {
 
 // Add the compression function
 function compressState(state: GameState): string {
-  // Only keep essential state data
-  const minState = {
+  // Essential game state for persistence
+  const minState: GameState = {
+    // Core game state
     p: state.p,
     c: state.c,
     pc: state.pc,
     cc: state.cc,
     m: state.m,
     w: state.w,
+    
+    // War-related state
+    warPile: state.warPile,
+    warCount: state.warCount || 0,
+    
+    // Game progress
+    moveCount: state.moveCount || 0,
+    lastDrawTime: state.lastDrawTime,
+    
+    // UI state
     username: state.username,
-    lastDrawTime: state.lastDrawTime
+    victoryMessage: state.victoryMessage,
+    
+    // Player data
+    fanTokenData: state.fanTokenData ? {
+      ownsToken: state.fanTokenData.ownsToken,
+      balance: state.fanTokenData.balance
+    } : undefined
   };
-  return Buffer.from(JSON.stringify(minState)).toString('base64');
+
+  try {
+    return Buffer.from(JSON.stringify(minState)).toString('base64');
+  } catch (error) {
+    console.error('State compression error:', error);
+    // Fallback to minimal state if compression fails
+    const fallbackState = {
+      p: state.p,
+      c: state.c,
+      m: 'Error saving game state',
+      w: false
+    };
+    return Buffer.from(JSON.stringify(fallbackState)).toString('base64');
+  }
 }
 
 // Routes
