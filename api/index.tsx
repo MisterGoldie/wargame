@@ -507,7 +507,7 @@ function handleTurn(state: GameState): GameState {
   const moveCount = (state.moveCount || 0) + 1;
   const shouldForceWar = moveCount % 12 === 0;
   
-  // Draw cards
+  // Draw cardsS
   const pc = state.p.pop()!;
   const cc = state.c.pop()!;
   const forcedPc = shouldForceWar ? { ...pc, v: 10 } : pc;
