@@ -526,12 +526,12 @@ function handleTurn(state: GameState): GameState {
 
     const newState = {
       ...state,
-      p: winner === 'p' ? [...state.p, forcedPc, forcedCc] : state.p,
-      c: winner === 'c' ? [...state.c, forcedPc, forcedCc] : state.c,
-      pc: null,
-      cc: null,
+      pc: forcedPc,    // Keep cards visible
+      cc: forcedCc,    // Keep cards visible
       moveCount,
       w: false,
+      p: winner === 'p' ? [...state.p, forcedPc, forcedCc] : state.p,
+      c: winner === 'c' ? [...state.c, forcedPc, forcedCc] : state.c,
       m: winner === 'p' 
         ? `You win with ${getCardLabel(forcedPc.v)}!` 
         : `Computer wins with ${getCardLabel(forcedCc.v)}!`,
@@ -557,13 +557,13 @@ function handleTurn(state: GameState): GameState {
 
     const newState = {
       ...state,
-      p: winner === 'p' ? [...state.p, ...allCardsInPlay] : state.p,
-      c: winner === 'c' ? [...state.c, ...allCardsInPlay] : state.c,
-      pc: null,
-      cc: null,
+      pc: forcedPc,    // Keep cards visible
+      cc: forcedCc,    // Keep cards visible
       moveCount,
       w: false,
       warPile: undefined,
+      p: winner === 'p' ? [...state.p, ...allCardsInPlay] : state.p,
+      c: winner === 'c' ? [...state.c, ...allCardsInPlay] : state.c,
       m: winner === 'p' 
         ? `You won the WAR with ${getCardLabel(forcedPc.v)}! (+${allCardsInPlay.length} cards)` 
         : `Computer won the WAR with ${getCardLabel(forcedCc.v)}! (+${allCardsInPlay.length} cards)`,
