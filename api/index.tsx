@@ -503,17 +503,31 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
   verifyCardCount(state, 'TURN_START');
+
+  // Draw one card from each deck
+  const pc = state.p.shift();
+  const cc = state.c.shift();
   
+  // Check for game over
+  if (!pc || !cc) {
+    const winner = state.p.length > 0 ? 'p' : 'c';
+    return {
+      ...state,
+      pc: null,
+      cc: null,
+      w: false,
+      moveCount: (state.moveCount || 0) + 1,
+      m: `Game Over! ${winner === 'p' ? 'You win!' : 'Computer wins!'}`,
+      victoryMessage: winner === 'p' ? '🎉 VICTORY! 🎉' : '💔 DEFEAT! 💔'
+    };
+  }
+
   const moveCount = (state.moveCount || 0) + 1;
   const shouldForceWar = moveCount % 12 === 0;
-  
-  // Draw cards
-  const pc = state.p.pop()!;
-  const cc = state.c.pop()!;
   const forcedPc = shouldForceWar ? { ...pc, v: 10 } : pc;
   const forcedCc = shouldForceWar ? { ...cc, v: 10 } : cc;
 
-  // Normal turn resolution
+  // Normal turn
   if (!state.w) {
     const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
     
@@ -521,21 +535,25 @@ function handleTurn(state: GameState): GameState {
       playerCard: `${getCardLabel(forcedPc.v)}${forcedPc.s}`,
       cpuCard: `${getCardLabel(forcedCc.v)}${forcedCc.s}`,
       winner,
-      forcedWar: shouldForceWar
+      forcedWar: shouldForceWar,
+      deckSizes: {
+        player: state.p.length,
+        cpu: state.c.length
+      }
     });
 
     const newState = {
       ...state,
-      pc: forcedPc,    // Keep cards visible
-      cc: forcedCc,    // Keep cards visible
+      pc: forcedPc,
+      cc: forcedCc,
       moveCount,
-      w: false,
+      w: forcedPc.v === forcedCc.v || shouldForceWar,
       p: winner === 'p' ? [...state.p, forcedPc, forcedCc] : state.p,
       c: winner === 'c' ? [...state.c, forcedPc, forcedCc] : state.c,
       m: winner === 'p' 
         ? `You win with ${getCardLabel(forcedPc.v)}!` 
         : `Computer wins with ${getCardLabel(forcedCc.v)}!`,
-      victoryMessage: undefined
+      warCount: 0
     };
 
     verifyCardCount(newState, 'NORMAL_TURN_END');
@@ -552,13 +570,17 @@ function handleTurn(state: GameState): GameState {
       cpuCard: `${getCardLabel(forcedCc.v)}${forcedCc.s}`,
       winner,
       warPileSize: state.warPile.length,
-      totalCards: allCardsInPlay.length
+      totalCardsInPlay: allCardsInPlay.length,
+      deckSizes: {
+        player: state.p.length,
+        cpu: state.c.length
+      }
     });
 
     const newState = {
       ...state,
-      pc: forcedPc,    // Keep cards visible
-      cc: forcedCc,    // Keep cards visible
+      pc: forcedPc,
+      cc: forcedCc,
       moveCount,
       w: false,
       warPile: undefined,
@@ -567,7 +589,7 @@ function handleTurn(state: GameState): GameState {
       m: winner === 'p' 
         ? `You won the WAR with ${getCardLabel(forcedPc.v)}! (+${allCardsInPlay.length} cards)` 
         : `Computer won the WAR with ${getCardLabel(forcedCc.v)}! (+${allCardsInPlay.length} cards)`,
-      victoryMessage: winner === 'p' ? '🎉 WAR VICTORY! 🎉' : '💔 WAR LOST! 💔'
+      warCount: (state.warCount || 0) + 1
     };
 
     verifyCardCount(newState, 'WAR_RESOLUTION_END');
