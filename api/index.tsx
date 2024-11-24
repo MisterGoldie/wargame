@@ -507,11 +507,23 @@ function handleTurn(state: GameState): GameState {
   const moveCount = (state.moveCount || 0) + 1;
   const shouldForceWar = moveCount % 12 === 0;
   
-  // Draw cardsS
+  // Draw cards
   const pc = state.p.pop()!;
   const cc = state.c.pop()!;
   const forcedPc = shouldForceWar ? { ...pc, v: 10 } : pc;
   const forcedCc = shouldForceWar ? { ...cc, v: 10 } : cc;
+
+  console.log('Turn progress:', {
+    playerCard: `${getCardLabel(forcedPc.v)}${forcedPc.s}`,
+    cpuCard: `${getCardLabel(forcedCc.v)}${forcedCc.s}`,
+    isWar: state.w,
+    forcedWar: shouldForceWar,
+    deckSizes: {
+      player: state.p.length,
+      cpu: state.c.length,
+      warPile: state.warPile?.length || 0
+    }
+  });
 
   // War resolution
   if (state.w && state.warPile) {
@@ -527,12 +539,18 @@ function handleTurn(state: GameState): GameState {
       warPile: undefined,
       p: winner === 'p' ? [...state.p, ...allCards] : state.p,
       c: winner === 'c' ? [...state.c, ...allCards] : state.c,
-      m: `${winner === 'p' ? 'You' : 'Computer'} won the WAR with ${getCardLabel(winner === 'p' ? forcedPc.v : forcedCc.v)}! (+${allCards.length} cards)`,
+      m: `${winner === 'p' ? 'You' : 'Computer'} won the WAR with ${getCardLabel(winner === 'p' ? forcedPc.v : forcedCc.v)} against ${getCardLabel(winner === 'p' ? forcedCc.v : forcedPc.v)}! (+${allCards.length} cards)`,
       victoryMessage: winner === 'p' ? '🎉 WAR VICTORY! 🎉' : '💔 WAR LOST! 💔',
       warCount: (state.warCount || 0) + 1
     };
 
     verifyCardCount(warResolution, 'WAR_RESOLUTION');
+    console.log('War resolution:', {
+      winner: winner === 'p' ? 'player' : 'cpu',
+      playerCards: warResolution.p.length,
+      cpuCards: warResolution.c.length,
+      cardsWon: allCards.length
+    });
     return warResolution;
   }
 
@@ -551,7 +569,7 @@ function handleTurn(state: GameState): GameState {
         w: false,
         p: winner === 'p' ? [...state.p, ...loserCards, forcedPc, forcedCc] : [],
         c: winner === 'c' ? [...state.c, ...loserCards, forcedPc, forcedCc] : [],
-        m: `Not enough cards for war! ${winner === 'p' ? 'You' : 'Computer'} wins all cards!`,
+        m: `Not enough cards for war! ${winner === 'p' ? 'You' : 'Computer'} wins all remaining cards!`,
         victoryMessage: winner === 'p' ? '🎉 War Victory! 🎉' : '💔 War Lost! 💔'
       };
 
@@ -570,7 +588,7 @@ function handleTurn(state: GameState): GameState {
       moveCount,
       w: true,
       warPile: [...pWarCards, ...cWarCards],
-      m: shouldForceWar ? "FORCED WAR!" : "WAR! Each player puts down 3 cards face down!",
+      m: shouldForceWar ? "FORCED WAR! Place 3 cards face down..." : "WAR! Equal cards! Place 3 cards face down...",
       victoryMessage: undefined
     };
 
