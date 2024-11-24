@@ -504,99 +504,100 @@ app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState): GameState {
   verifyCardCount(state, 'TURN_START');
 
-  // Draw one card from each deck
-  const pc = state.p.shift();
-  const cc = state.c.shift();
+  // Draw cards
+  const pc = state.p.pop()!;
+  const cc = state.c.pop()!;
   
-  // Check for game over
-  if (!pc || !cc) {
-    const winner = state.p.length > 0 ? 'p' : 'c';
-    return {
-      ...state,
-      pc: null,
-      cc: null,
-      w: false,
-      moveCount: (state.moveCount || 0) + 1,
-      m: `Game Over! ${winner === 'p' ? 'You win!' : 'Computer wins!'}`,
-      victoryMessage: winner === 'p' ? '🎉 VICTORY! 🎉' : '💔 DEFEAT! 💔'
-    };
-  }
-
   const moveCount = (state.moveCount || 0) + 1;
   const shouldForceWar = moveCount % 12 === 0;
   const forcedPc = shouldForceWar ? { ...pc, v: 10 } : pc;
   const forcedCc = shouldForceWar ? { ...cc, v: 10 } : cc;
 
-  // Normal turn
-  if (!state.w) {
-    const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
-    
-    console.log('Normal turn:', {
-      playerCard: `${getCardLabel(forcedPc.v)}${forcedPc.s}`,
-      cpuCard: `${getCardLabel(forcedCc.v)}${forcedCc.s}`,
-      winner,
-      forcedWar: shouldForceWar,
-      deckSizes: {
-        player: state.p.length,
-        cpu: state.c.length
-      }
-    });
+  console.log('Turn progress:', {
+    playerCard: `${getCardLabel(forcedPc.v)}${forcedPc.s}`,
+    cpuCard: `${getCardLabel(forcedCc.v)}${forcedCc.s}`,
+    isWar: state.w,
+    forcedWar: shouldForceWar,
+    deckSizes: {
+      player: state.p.length,
+      cpu: state.c.length,
+      warPile: state.warPile?.length || 0
+    }
+  });
 
-    const newState = {
+  // Equal cards - start war
+  if (forcedPc.v === forcedCc.v && !state.w) {
+    // Not enough cards checks
+    if (state.p.length < 3 || state.c.length < 3) {
+      const winner = state.p.length >= state.c.length ? 'p' : 'c';
+      const newState = {
+        ...state,
+        pc: forcedPc,
+        cc: forcedCc,
+        moveCount,
+        w: false,
+        p: winner === 'p' ? [...state.p, ...state.c, forcedPc, forcedCc] : [],
+        c: winner === 'c' ? [...state.c, ...state.p, forcedPc, forcedCc] : [],
+        m: `Not enough cards for war! ${winner === 'p' ? 'You' : 'Computer'} wins all!`,
+        victoryMessage: winner === 'p' ? '🎉 War Victory! 🎉' : '💔 War Lost! 💔'
+      };
+      verifyCardCount(newState, 'WAR_INSUFFICIENT_CARDS');
+      return newState;
+    }
+
+    // Draw war cards
+    const pWarCards = state.p.splice(-3).map(c => ({...c, hidden: true}));
+    const cWarCards = state.c.splice(-3).map(c => ({...c, hidden: true}));
+    
+    const warState = {
       ...state,
       pc: forcedPc,
       cc: forcedCc,
       moveCount,
-      w: forcedPc.v === forcedCc.v || shouldForceWar,
-      p: winner === 'p' ? [...state.p, forcedPc, forcedCc] : state.p,
-      c: winner === 'c' ? [...state.c, forcedPc, forcedCc] : state.c,
-      m: winner === 'p' 
-        ? `You win with ${getCardLabel(forcedPc.v)}!` 
-        : `Computer wins with ${getCardLabel(forcedCc.v)}!`,
-      warCount: 0
+      w: true,
+      warPile: [...pWarCards, ...cWarCards],
+      m: shouldForceWar ? "FORCED WAR!" : "WAR! Equal cards!",
+      victoryMessage: undefined
     };
-
-    verifyCardCount(newState, 'NORMAL_TURN_END');
-    return newState;
+    verifyCardCount(warState, 'WAR_START');
+    return warState;
   }
 
-  // War resolution
+  // Resolve existing war
   if (state.w && state.warPile) {
     const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
-    const allCardsInPlay = [...state.warPile, forcedPc, forcedCc];
+    const allCards = [...state.warPile, forcedPc, forcedCc];
     
-    console.log('War resolution:', {
-      playerCard: `${getCardLabel(forcedPc.v)}${forcedPc.s}`,
-      cpuCard: `${getCardLabel(forcedCc.v)}${forcedCc.s}`,
-      winner,
-      warPileSize: state.warPile.length,
-      totalCardsInPlay: allCardsInPlay.length,
-      deckSizes: {
-        player: state.p.length,
-        cpu: state.c.length
-      }
-    });
-
-    const newState = {
+    const warResolution = {
       ...state,
       pc: forcedPc,
       cc: forcedCc,
       moveCount,
       w: false,
       warPile: undefined,
-      p: winner === 'p' ? [...state.p, ...allCardsInPlay] : state.p,
-      c: winner === 'c' ? [...state.c, ...allCardsInPlay] : state.c,
-      m: winner === 'p' 
-        ? `You won the WAR with ${getCardLabel(forcedPc.v)}! (+${allCardsInPlay.length} cards)` 
-        : `Computer won the WAR with ${getCardLabel(forcedCc.v)}! (+${allCardsInPlay.length} cards)`,
-      warCount: (state.warCount || 0) + 1
+      p: winner === 'p' ? [...state.p, ...allCards] : state.p,
+      c: winner === 'c' ? [...state.c, ...allCards] : state.c,
+      m: `${winner === 'p' ? 'You' : 'Computer'} won the WAR with ${getCardLabel(winner === 'p' ? forcedPc.v : forcedCc.v)}! (+${allCards.length} cards)`,
+      victoryMessage: winner === 'p' ? '🎉 WAR VICTORY! 🎉' : '💔 WAR LOST! 💔'
     };
-
-    verifyCardCount(newState, 'WAR_RESOLUTION_END');
-    return newState;
+    verifyCardCount(warResolution, 'WAR_RESOLUTION');
+    return warResolution;
   }
 
-  throw new Error('Invalid game state: Neither normal turn nor war resolution');
+  // Normal turn
+  const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
+  const normalTurn = {
+    ...state,
+    pc: forcedPc,
+    cc: forcedCc,
+    moveCount,
+    w: false,
+    p: winner === 'p' ? [...state.p, forcedPc, forcedCc] : state.p,
+    c: winner === 'c' ? [...state.c, forcedPc, forcedCc] : state.c,
+    m: `${winner === 'p' ? 'You' : 'Computer'} win${winner === 'p' ? '' : 's'} with ${getCardLabel(winner === 'p' ? forcedPc.v : forcedCc.v)}!`
+  };
+  verifyCardCount(normalTurn, 'NORMAL_TURN');
+  return normalTurn;
 }
 
 // Add the compression function
