@@ -560,20 +560,19 @@ app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleNukeUse(state: GameState): GameState {
   console.log('Processing player nuke use');
   
-  // Create nuke card with consistent value and suit
   const nukeCard: Card = { 
-    v: 14,  // Higher than King (13) for display
-    s: '♦',  // Using diamond suit for red color
+    v: 10,
+    s: '♦',
     isNuke: true
   };
   
   let newState: GameState;
   
-  // Handle instant win case (10 or fewer cards)
+  // Handle instant win case
   if (state.c.length <= 10) {
     newState = {
       ...state,
-      p: [...state.p, ...state.c],  // Take all remaining cards
+      p: [...state.p, ...state.c],
       c: [],
       pc: nukeCard,
       cc: null,
@@ -587,8 +586,31 @@ function handleNukeUse(state: GameState): GameState {
     return newState;
   }
 
-  // Standard nuke case - take 10 cards
+  // Take 10 cards with nuke
   const nukedCards = state.c.splice(-10);
+  
+  // Continue with a normal turn after showing nuke
+  if (state.p.length > 0 && state.c.length > 0) {
+    const pc = state.p.pop()!;
+    const cc = state.c.pop()!;
+    const winner = pc.v > cc.v ? 'p' : 'c';
+    
+    newState = {
+      ...state,
+      p: [...state.p, ...nukedCards, ...(winner === 'p' ? [pc, cc] : [])],
+      c: [...state.c, ...(winner === 'c' ? [pc, cc] : [])],
+      pc: nukeCard,
+      cc,
+      playerNukeAvailable: false,
+      moveCount: (state.moveCount || 0) + 1,
+      lastDrawTime: Date.now(),
+      m: `Nuke stole 10 cards! Then ${winner === 'p' ? 'you' : 'CPU'} won with ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!`,
+      victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
+    };
+    verifyCardCount(newState, 'NUKE_WITH_TURN');
+    return newState;
+  }
+
   newState = {
     ...state,
     p: [...state.p, ...nukedCards],
@@ -600,7 +622,7 @@ function handleNukeUse(state: GameState): GameState {
     m: 'NUKE USED! You captured 10 enemy cards!',
     victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
   };
-  verifyCardCount(newState, 'NUKE_STANDARD');
+  verifyCardCount(newState, 'NUKE_ONLY');
   return newState;
 }
 
