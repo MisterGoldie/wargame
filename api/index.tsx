@@ -543,7 +543,7 @@ async function checkFanTokenOwnership(fid: string): Promise<FanTokenData> {
 // Constants for nuke messages
 const NUKE_MESSAGES = {
   PLAYER: {
-    SUCCESS: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️',
+    SUCCESS: '☢️ NUKE ☢️',
     color: '#4ADE80'  // Green
   },
   CPU: {
