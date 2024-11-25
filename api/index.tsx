@@ -189,7 +189,7 @@ function shuffle<T>(array: T[]): T[] {
 }
 
 function initializeGame(): GameState {
-  const deck = shuffle(createRegularDeck()); // Only 52 cards
+  const deck = shuffle(createRegularDeck());
   const midpoint = Math.floor(deck.length / 2);
   
   return {
@@ -204,7 +204,7 @@ function initializeGame(): GameState {
     cpuNukeAvailable: true,
     moveCount: 0,
     warCount: 0,
-    color: '#4ADE80',
+    color: undefined,
     colorResetPending: false
   };
 }
@@ -870,7 +870,7 @@ const styles = {
 
 // Update handleTurn to actually implement the logic instead of throwing
 function handleTurn(state: GameState, useNuke: boolean = false): GameState {
-  // Reset color if it was pending from previous nuke
+  // Reset color if it was pending from previous turn
   if (state.colorResetPending) {
     state = {
       ...state,
@@ -1062,7 +1062,7 @@ app.frame('/game', async (c) => {
             <div style={styles.messageArea}>
               <span style={{
                 ...styles.gameMessage(state.w),
-                color: state.color || styles.gameMessage(state.w).color  // Use nuke color if set
+                color: state.color || 'white'  // Default to white if no special color
               }}>
                 {state.m}
               </span>
