@@ -133,12 +133,12 @@ const MOXIE_VESTING_API_URL = "https://api.studio.thegraph.com/query/23537/moxie
 const MOXIE_API_URL = "https://api.studio.thegraph.com/query/23537/moxie_protocol_stats_mainnet/version/latest";
 
 // Define types
-interface Card {
+type Card = {
   v: number;
   s: string;
   hidden?: boolean;
   isNuke?: boolean;
-}
+};
 
 type GameState = {
   p: Card[];                // Player's deck
@@ -560,69 +560,126 @@ app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleNukeUse(state: GameState): GameState {
   console.log('Processing player nuke use');
   
+  const nukeCard: Card = { v: 0, s: '☢️', isNuke: true };
+  let newState: GameState;
+  
+  // Handle instant win case
   if (state.c.length <= 10) {
-    // Total victory scenario
-    const nukeVictory = {
+    newState = {
       ...state,
       p: [...state.p, ...state.c],
       c: [],
+      pc: nukeCard,
+      cc: null,
       playerNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
       m: 'NUCLEAR VICTORY! Your nuke completely destroyed CPU\'s forces!',
       victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
     };
-    verifyCardCount(nukeVictory, 'NUKE_VICTORY');
-    return nukeVictory;
+    verifyCardCount(newState, 'NUKE_INSTANT_WIN');
+    return newState;
   }
 
-  // Standard nuke scenario
+  // Take 10 cards with nuke
   const nukedCards = state.c.splice(-10);
-  const nukeStrike = {
+  
+  // Continue with a normal turn if possible
+  if (state.p.length > 0 && state.c.length > 0) {
+    const pc = state.p.pop()!;
+    const cc = state.c.pop()!;
+    const winner = pc.v > cc.v ? 'p' : 'c';
+    
+    newState = {
+      ...state,
+      p: [...state.p, ...nukedCards, ...(winner === 'p' ? [pc, cc] : [])],
+      c: [...state.c, ...(winner === 'c' ? [pc, cc] : [])],
+      pc,
+      cc,
+      playerNukeAvailable: false,
+      moveCount: (state.moveCount || 0) + 1,
+      lastDrawTime: Date.now(),
+      m: `Nuke stole 10 cards! Then ${winner === 'p' ? 'you' : 'CPU'} won with ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!`,
+      victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
+    };
+    verifyCardCount(newState, 'NUKE_WITH_TURN');
+    return newState;
+  }
+
+  // Nuke-only result
+  newState = {
     ...state,
     p: [...state.p, ...nukedCards],
+    pc: nukeCard,
+    cc: null,
     playerNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
     m: 'NUKE USED! You captured 10 enemy cards!',
     victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
   };
-  verifyCardCount(nukeStrike, 'NUKE_STRIKE');
-  return nukeStrike;
+  verifyCardCount(newState, 'NUKE_ONLY');
+  return newState;
 }
 
 function handleCpuNuke(state: GameState): GameState {
   console.log('Processing CPU nuke use');
   
+  const nukeCard: Card = { v: 0, s: '☢️', isNuke: true };
+  let newState: GameState;
+  
   if (state.p.length <= 10) {
-    // CPU total victory
-    const cpuNukeVictory = {
+    newState = {
       ...state,
       p: [],
       c: [...state.c, ...state.p],
+      pc: null,
+      cc: nukeCard,
       cpuNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: 'CPU used their NUKE! Your forces were completely destroyed!',
-      victoryMessage: '☢️ NUCLEAR DEFEAT! ☢️'
+      m: 'NUCLEAR VICTORY! CPU\'s nuke completely destroyed your forces!',
+      victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
     };
-    verifyCardCount(cpuNukeVictory, 'CPU_NUKE_VICTORY');
-    return cpuNukeVictory;
+    verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
+    return newState;
   }
 
-  // Standard CPU nuke
   const nukedCards = state.p.splice(-10);
-  const cpuNukeStrike = {
+  if (state.p.length > 0 && state.c.length > 0) {
+    const pc = state.p.pop()!;
+    const cc = state.c.pop()!;
+    const winner = pc.v > cc.v ? 'p' : 'c';
+    
+    newState = {
+      ...state,
+      p: [...state.p, ...nukedCards, ...(winner === 'p' ? [pc, cc] : [])],
+      c: [...state.c, ...(winner === 'c' ? [pc, cc] : [])],
+      pc,  // Show regular card after nuke
+      cc,
+      cpuNukeAvailable: false,
+      moveCount: (state.moveCount || 0) + 1,
+      lastDrawTime: Date.now(),
+      m: `CPU Nuke stole 10 cards! Then ${winner === 'p' ? 'you' : 'CPU'} won with ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!`,
+      victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
+    };
+    verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
+    return newState;
+  }
+
+  newState = {
     ...state,
-    c: [...state.c, ...nukedCards],
+    p: [...state.p, ...nukedCards],
+    pc: null,
+    cc: nukeCard,
     cpuNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: 'CPU used their NUKE! They captured 10 of your cards!',
-    victoryMessage: '☢️ NUCLEAR STRIKE RECEIVED! ☢️'
+    m: 'CPU Nuke used! You captured 10 enemy cards!',
+    victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
   };
-  verifyCardCount(cpuNukeStrike, 'CPU_NUKE_STRIKE');
-  return cpuNukeStrike;
+  verifyCardCount(newState, 'CPU_NUKE_ONLY');
+  return newState;
 }
 
 function handleNormalTurn(state: GameState, pc: Card, cc: Card): GameState {
@@ -722,17 +779,16 @@ function GameCard({ card }: { card: Card }) {
     );
   }
   
-  // Special styling for nuke cards
+  // New nuke card display
   if (card.isNuke) {
     return (
       <div style={{
         ...CardStyle,
-        backgroundColor: '#ff0000',  // Red background
-        color: '#000000',           // Black text
-        border: '2px solid #000000' // Black border for extra emphasis
+        backgroundColor: 'white',
+        color: '#000000'
       }}>
         <span style={{ fontSize: '24px' }}>NUKE</span>
-        <span style={{ fontSize: '48px' }}>{card.s}</span>
+        <span style={{ fontSize: '48px' }}>☢️</span>
         <span style={{ fontSize: '24px', transform: 'rotate(180deg)' }}>
           NUKE
         </span>
@@ -827,62 +883,66 @@ const styles = {
 } as const;
 
 // Update handleTurn to actually implement the logic instead of throwing
-function handleTurn(decodedState: GameState, useNuke: boolean): GameState {
-  verifyCardCount(decodedState, 'TURN_START');
+function handleTurn(state: GameState, useNuke: boolean = false): GameState {
+  verifyCardCount(state, 'TURN_START');
+  const moveCount = (state.moveCount || 0) + 1;
   
   if (useNuke) {
-    return handleNukeUse(decodedState);
+    return handleNukeUse(state);
   }
 
-  if (!decodedState.p.length || !decodedState.c.length) {
+  if (!state.p.length || !state.c.length) {
     return {
-      ...decodedState,
-      m: `Game Over! ${!decodedState.c.length ? 'You' : 'CPU'} wins!`,
-      victoryMessage: !decodedState.c.length ? '🎉 Victory! 🎉' : '💔 Defeat! 💔'
+      ...state,
+      m: `Game Over! ${!state.c.length ? 'You' : 'CPU'} wins!`,
+      victoryMessage: !state.c.length ? '🎉 Victory! 🎉' : '💔 Defeat! 💔'
     };
   }
 
-  const pc = decodedState.p.pop()!;
-  const cc = decodedState.c.pop()!;
+  const pc = state.p.pop()!;
+  const cc = state.c.pop()!;
 
   // Check for CPU nuke opportunity
-  if (decodedState.cpuNukeAvailable && decodedState.c.length < 15 && Math.random() < 0.3) {
-    decodedState.p.push(pc);
-    decodedState.c.push(cc);
-    return handleCpuNuke(decodedState);
+  if (state.cpuNukeAvailable && state.c.length < 15 && Math.random() < 0.3) {
+    state.p.push(pc);
+    state.c.push(cc);
+    return handleCpuNuke(state);
   }
 
   // Check for war
   if (pc.v === cc.v) {
     // Handle war logic
-    if (decodedState.p.length < 3 || decodedState.c.length < 3) {
-      const winner = decodedState.p.length >= decodedState.c.length ? 'p' : 'c';
+    if (state.p.length < 3 || state.c.length < 3) {
+      const winner = state.p.length >= state.c.length ? 'p' : 'c';
       return {
-        ...decodedState,
+        ...state,
         pc,
         cc,
-        p: winner === 'p' ? [...decodedState.p, pc, cc] : [],
-        c: winner === 'c' ? [...decodedState.c, pc, cc] : [],
+        p: winner === 'p' ? [...state.p, pc, cc] : [],
+        c: winner === 'c' ? [...state.c, pc, cc] : [],
         w: false,
         m: `Not enough cards for war! ${winner === 'p' ? 'You' : 'Computer'} wins!`,
         victoryMessage: winner === 'p' ? '🎉 Victory! 🎉' : '💔 Defeat! 💔'
       };
     }
 
+    const pWarCards = state.p.splice(-3).map(c => ({...c, hidden: true}));
+    const cWarCards = state.c.splice(-3).map(c => ({...c, hidden: true}));
+
     return {
-      ...decodedState,
+      ...state,
       pc,
       cc,
       w: true,
-      warPile: [...decodedState.p.splice(-3), ...decodedState.c.splice(-3)].map(c => ({...c, hidden: true})),
+      warPile: [...pWarCards, ...cWarCards],
       m: 'WAR! Three cards face down...',
-      moveCount: (decodedState.moveCount || 0) + 1,
+      moveCount,
       lastDrawTime: Date.now(),
-      warCount: (decodedState.warCount || 0) + 1
+      warCount: (state.warCount || 0) + 1
     };
   }
 
-  return handleNormalTurn(decodedState, pc, cc);
+  return handleNormalTurn(state, pc, cc);
 }
 
 // Update game frame handler with new UI
