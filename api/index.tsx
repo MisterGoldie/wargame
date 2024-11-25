@@ -137,6 +137,7 @@ interface Card {
   v: number;
   s: string;
   hidden?: boolean;
+  isNuke?: boolean;
 }
 
 type GameState = {
@@ -156,6 +157,8 @@ type GameState = {
     ownsToken: boolean;
     balance: number;
   };
+  playerNukeAvailable?: boolean;
+  cpuNukeAvailable?: boolean;
 };
 
 function getCardLabel(value: number): string {
@@ -168,12 +171,10 @@ function getCardLabel(value: number): string {
   return specialCards[value] || value.toString();
 }
 
-function createDeck(): Card[] {
-  const suits = ['♠', '♣', '♥', '♦'];  // Using actual suit symbols
+function createRegularDeck(): Card[] {
+  const suits = ['♠', '♣', '♥', '♦'];
   const values = Array.from({ length: 13 }, (_, i) => i + 1);
-  return shuffle(suits.flatMap(s => 
-    values.map(v => ({ v, s }))
-  ));
+  return suits.flatMap(s => values.map(v => ({ v, s })));
 }
 
 function shuffle<T>(array: T[]): T[] {
@@ -186,17 +187,37 @@ function shuffle<T>(array: T[]): T[] {
 }
 
 function initializeGame(): GameState {
-  const deck = createDeck();
-  const midpoint = Math.floor(deck.length / 2);
-  return {
-    p: deck.slice(0, midpoint),    // playerDeck
-    c: deck.slice(midpoint),       // computerDeck
-    pc: null,                      // playerCard
-    cc: null,                      // computerCard
-    m: 'Welcome to War! Draw a card to begin.',  // message
-    w: false,                       // isWar
-    lastDrawTime: Date.now()
+  const regularDeck = createRegularDeck();
+  const playerNuke: Card = { v: 10, s: '☢️', isNuke: true };
+  const cpuNuke: Card = { v: 10, s: '☢️', isNuke: true };
+  
+  // Add nukes and shuffle
+  const fullDeck = shuffle([...regularDeck, playerNuke, cpuNuke]);
+  const midpoint = Math.floor(fullDeck.length / 2);
+  
+  const initialState: GameState = {
+    p: fullDeck.slice(0, midpoint),
+    c: fullDeck.slice(midpoint),
+    pc: null,
+    cc: null,
+    m: 'Welcome to War! Draw a card to begin. You have one nuke card available!',
+    w: false,
+    lastDrawTime: Date.now(),
+    playerNukeAvailable: true,
+    cpuNukeAvailable: true,
+    moveCount: 0,
+    warCount: 0
   };
+
+  verifyCardCount(initialState, 'GAME_INIT');
+  console.log('Game initialized:', {
+    totalCards: fullDeck.length,
+    playerCards: initialState.p.length,
+    cpuCards: initialState.c.length,
+    nukeCardsAdded: 2
+  });
+
+  return initialState;
 }
 
 // 1. Add these functions at the top with other utility functions
@@ -501,9 +522,66 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 });
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
-function handleTurn(state: GameState): GameState {
+function handleTurn(state: GameState, useNuke: boolean = false): GameState {
   verifyCardCount(state, 'TURN_START');
 
+  // Handle nuke card usage
+  if (useNuke && state.playerNukeAvailable) {
+    console.log('Player using nuke card');
+    if (state.c.length <= 10) {
+      const nukeVictory = {
+        ...state,
+        p: [...state.p, ...state.c],
+        c: [],
+        playerNukeAvailable: false,
+        m: 'NUCLEAR VICTORY! Your nuke card destroyed all CPU cards!',
+        victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
+      };
+      verifyCardCount(nukeVictory, 'NUKE_VICTORY');
+      return nukeVictory;
+    }
+
+    const nukedCards = state.c.splice(-10);
+    const nukeStrike = {
+      ...state,
+      p: [...state.p, ...nukedCards],
+      playerNukeAvailable: false,
+      m: 'NUKE CARD USED! You gained 10 cards from CPU!',
+      victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
+    };
+    verifyCardCount(nukeStrike, 'NUKE_STRIKE');
+    return nukeStrike;
+  }
+
+  // CPU nuke logic - triggers when CPU is losing badly
+  if (state.cpuNukeAvailable && state.c.length < 20 && Math.random() < 0.2) {
+    console.log('CPU using nuke card');
+    if (state.p.length <= 10) {
+      const cpuNukeVictory = {
+        ...state,
+        p: [],
+        c: [...state.c, ...state.p],
+        cpuNukeAvailable: false,
+        m: 'CPU used their NUKE CARD! You were completely destroyed!',
+        victoryMessage: '☢️ NUCLEAR DEFEAT! ☢️'
+      };
+      verifyCardCount(cpuNukeVictory, 'CPU_NUKE_VICTORY');
+      return cpuNukeVictory;
+    }
+
+    const nukedCards = state.p.splice(-10);
+    const cpuNukeStrike = {
+      ...state,
+      c: [...state.c, ...nukedCards],
+      cpuNukeAvailable: false,
+      m: 'CPU used their NUKE CARD! They stole 10 of your cards!',
+      victoryMessage: '☢️ NUCLEAR STRIKE RECEIVED! ☢️'
+    };
+    verifyCardCount(cpuNukeStrike, 'CPU_NUKE_STRIKE');
+    return cpuNukeStrike;
+  }
+
+  // Continue with regular turn logic
   const moveCount = (state.moveCount || 0) + 1;
   const shouldForceWar = moveCount % 12 === 0;
   
