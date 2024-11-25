@@ -944,7 +944,7 @@ app.frame('/game', async (c) => {
     let username = 'Player';
     let fanTokenData = { ownsToken: false, balance: 0 };
 
-    // Only check API on initial game start
+    // Only do API calls on fresh game start (no buttonValue)
     if (!buttonValue && fid) {
       try {
         const [usernameResult, tokenData] = await Promise.all([
@@ -953,20 +953,18 @@ app.frame('/game', async (c) => {
         ]);
         username = usernameResult;
         fanTokenData = tokenData;
+        state = { ...initializeGame(), username, fanTokenData };
       } catch (error) {
         console.error('Error during initial game setup:', error);
+        state = { ...initializeGame(), username: 'Player', fanTokenData: { ownsToken: false, balance: 0 } };
       }
-      state = { ...initializeGame(), username, fanTokenData };
     } 
-    // Use stored values for subsequent moves
+    // For all other moves, use the state from the button
     else if (buttonValue?.startsWith('draw:') || buttonValue?.startsWith('nuke:')) {
       const encodedState = buttonValue.split(':')[1];
       const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
       
-      // Use the values stored in state
-      username = decodedState.username || 'Player';
-      fanTokenData = decodedState.fanTokenData || { ownsToken: false, balance: 0 };
-      
+      // Add cooldown check
       if (isOnCooldown(decodedState.lastDrawTime)) {
         return c.res({
           image: (
@@ -980,16 +978,17 @@ app.frame('/game', async (c) => {
           ),
           intents: [
             <Button value={buttonValue}>
-              {buttonValue.startsWith('nuke:') ? 'Use Nuke ☢️' : 'Draw Card'}
+              {buttonValue.startsWith('nuke:') ? NUKE_MESSAGES.PLAYER.SUCCESS : 'Draw Card'}
             </Button>
           ]
         });
       }
       
       state = handleTurn(decodedState, buttonValue.startsWith('nuke:'));
-      verifyCardCount(state, 'POST_TURN');
-    } else {
-      state = { ...initializeGame(), username, fanTokenData };
+    }
+    // Fallback initialization without API calls
+    else {
+      state = { ...initializeGame(), username: 'Player', fanTokenData: { ownsToken: false, balance: 0 } };
     }
 
     const isGameOver = !state.p.length || !state.c.length;
