@@ -1175,7 +1175,7 @@ function isOnCooldown(lastDrawTime: number | undefined): boolean {
 }
 
 function verifyCardCount(state: GameState, location: string): boolean {
-  // Calculate card counts
+  // Calculate card counts including nuke cards
   const cardCounts = {
     playerDeck: state.p.length,
     cpuDeck: state.c.length,
@@ -1184,31 +1184,42 @@ function verifyCardCount(state: GameState, location: string): boolean {
   };
   
   const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0);
+  const expectedCards = 54; // 52 regular cards + 2 nuke cards
 
-  // Basic validation
-  const isValid = totalCards === 52;
+  // Enhanced validation
+  const isValid = totalCards === expectedCards;
 
-  // Log state details
+  // Detailed state logging
   console.log(`🃏 ${location}:`, {
     total: totalCards,
     breakdown: cardCounts,
     gameState: {
       isWar: state.w,
-      moveCount: state.moveCount || 0
+      moveCount: state.moveCount || 0,
+      nukeStatus: {
+        playerNukeAvailable: state.playerNukeAvailable,
+        cpuNukeAvailable: state.cpuNukeAvailable
+      }
     }
   });
 
   if (!isValid) {
     console.error(`❌ Card count error at ${location}:`, {
       total: totalCards,
-      expected: 52,
-      missing: 52 - totalCards,
+      expected: expectedCards,
+      missing: expectedCards - totalCards,
       breakdown: cardCounts,
-      message: state.m
+      message: state.m,
+      nukeStatus: {
+        player: state.playerNukeAvailable,
+        cpu: state.cpuNukeAvailable
+      },
+      warState: state.w,
+      moveCount: state.moveCount || 0
     });
     
     if (process.env.NODE_ENV === 'development') {
-      throw new Error(`Invalid card count at ${location}: ${totalCards}`);
+      throw new Error(`Invalid card count at ${location}: ${totalCards} (expected ${expectedCards})`);
     }
   }
 
