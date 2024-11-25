@@ -798,68 +798,98 @@ const styles = {
   root: {
     display: 'flex',
     flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
     width: '1080px',
     height: '1080px',
     backgroundColor: '#1a1a1a',
-    padding: '40px'
+    padding: '40px',
+    fontFamily: 'Silkscreen'
   },
   gamePanel: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '20px'
-  },
-  cooldownMessage: {
-    fontSize: '24px',
-    color: '#ff4444',
-    textAlign: 'center'
-  },
-  errorMessage: {
-    fontSize: '24px',
-    color: '#ff4444',
-    textAlign: 'center'
+    justifyContent: 'space-between',
+    gap: '40px',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    padding: '60px',
+    borderRadius: '20px',
+    width: '90%',
+    maxWidth: '900px',
+    border: '2px solid #333'
   },
   counter: {
     display: 'flex',
-    justifyContent: 'space-between',
     width: '100%',
-    padding: '10px 20px',
-    color: 'white',
-    fontSize: '24px'
-  },
-  fanTokenIndicator: {
-    color: '#4ADE80',
-    fontSize: '20px',
-    marginBottom: '10px'
+    justifyContent: 'space-between',
+    fontSize: '36px',
+    color: '#ffffff',
+    textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
   },
   cardArea: {
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
-    gap: '20px',
-    marginBottom: '20px'
+    gap: '40px',
+    padding: '20px',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: '15px',
+    minHeight: '300px',
+    justifyContent: 'center'
   },
   vsText: {
-    color: 'white',
-    fontSize: '32px',
-    margin: '0 20px'
+    fontSize: '48px',
+    fontWeight: 'bold',
+    color: '#ff4444',
+    textShadow: '0 0 10px rgba(255,68,68,0.5)'
   },
   messageArea: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '20px'
+    gap: '20px',
+    width: '100%',
+    textAlign: 'center'
   },
   gameMessage: (isWar: boolean) => ({
-    fontSize: '32px',
-    color: isWar ? '#ff4444' : 'white',
-    textAlign: 'center' as const
+    fontSize: isWar ? '42px' : '36px',
+    color: isWar ? '#ff4444' : '#ffffff',
+    textShadow: isWar ? '0 0 10px rgba(255,68,68,0.5)' : '2px 2px 4px rgba(0,0,0,0.5)',
+    fontWeight: isWar ? 'bold' : 'normal'
   }),
   victoryMessage: {
     fontSize: '48px',
     color: '#4ADE80',
     fontWeight: 'bold',
-    textAlign: 'center' as const
+    textShadow: '0 0 10px rgba(74,222,128,0.5)',
+    animation: 'pulse 2s infinite'
+  },
+  fanTokenIndicator: {
+    fontSize: '24px',
+    color: '#4ADE80',
+    padding: '10px 20px',
+    backgroundColor: 'rgba(74,222,128,0.1)',
+    borderRadius: '10px',
+    border: '1px solid #4ADE80'
+  },
+  cooldownMessage: {
+    fontSize: '36px',
+    color: '#ff4444',
+    textAlign: 'center',
+    padding: '20px',
+    backgroundColor: 'rgba(255,68,68,0.1)',
+    borderRadius: '10px',
+    border: '1px solid #ff4444'
+  },
+  errorMessage: {
+    fontSize: '32px',
+    color: '#ff4444',
+    textAlign: 'center',
+    padding: '20px',
+    backgroundColor: 'rgba(255,68,68,0.1)',
+    borderRadius: '10px',
+    border: '1px solid #ff4444',
+    maxWidth: '80%'
   }
 } as const;
 
