@@ -560,20 +560,19 @@ app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleNukeUse(state: GameState): GameState {
   console.log('Processing player nuke use');
   
-  // Create nuke card with consistent value and suit
   const nukeCard: Card = { 
-    v: 14,  // Higher than King (13) for display
-    s: '♦',  // Using diamond suit for red color
+    v: 14,  // Using 14 to be higher than King (13)
+    s: '♦',
     isNuke: true
   };
   
   let newState: GameState;
   
-  // Handle instant win case (10 or fewer cards)
+  // Handle instant win case
   if (state.c.length <= 10) {
     newState = {
       ...state,
-      p: [...state.p, ...state.c],  // Take all remaining cards
+      p: [...state.p, ...state.c],
       c: [],
       pc: nukeCard,
       cc: null,
@@ -587,17 +586,19 @@ function handleNukeUse(state: GameState): GameState {
     return newState;
   }
 
-  // Standard nuke case - take 10 cards
+  // Take 10 cards with nuke
   const nukedCards = state.c.splice(-10);
+  const capturedCard = nukedCards[nukedCards.length - 1];
+  
   newState = {
     ...state,
     p: [...state.p, ...nukedCards],
     pc: nukeCard,
-    cc: null,
+    cc: capturedCard,
     playerNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: 'NUKE USED! You captured 10 enemy cards!',
+    m: `NUKE USED! You captured 10 enemy cards including ${getCardLabel(capturedCard.v)}!`,
     victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
   };
   verifyCardCount(newState, 'NUKE_STANDARD');
@@ -607,7 +608,12 @@ function handleNukeUse(state: GameState): GameState {
 function handleCpuNuke(state: GameState): GameState {
   console.log('Processing CPU nuke use');
   
-  const nukeCard: Card = { v: 0, s: '☢️', isNuke: true };
+  const nukeCard: Card = { 
+    v: 14,
+    s: '♦',
+    isNuke: true
+  };
+  
   let newState: GameState;
   
   if (state.p.length <= 10) {
@@ -620,47 +626,28 @@ function handleCpuNuke(state: GameState): GameState {
       cpuNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: 'NUCLEAR VICTORY! CPU\'s nuke completely destroyed your forces!',
-      victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
+      m: 'CPU used their NUKE! Your forces were completely destroyed!',
+      victoryMessage: '☢️ NUCLEAR DEFEAT! ☢️'
     };
     verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
     return newState;
   }
 
   const nukedCards = state.p.splice(-10);
-  if (state.p.length > 0 && state.c.length > 0) {
-    const pc = state.p.pop()!;
-    const cc = state.c.pop()!;
-    const winner = pc.v > cc.v ? 'p' : 'c';
-    
-    newState = {
-      ...state,
-      p: [...state.p, ...nukedCards, ...(winner === 'p' ? [pc, cc] : [])],
-      c: [...state.c, ...(winner === 'c' ? [pc, cc] : [])],
-      pc,  // Show regular card after nuke
-      cc,
-      cpuNukeAvailable: false,
-      moveCount: (state.moveCount || 0) + 1,
-      lastDrawTime: Date.now(),
-      m: `CPU Nuke stole 10 cards! Then ${winner === 'p' ? 'you' : 'CPU'} won with ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!`,
-      victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
-    };
-    verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
-    return newState;
-  }
+  const capturedCard = nukedCards[nukedCards.length - 1];
 
   newState = {
     ...state,
-    p: [...state.p, ...nukedCards],
-    pc: null,
+    c: [...state.c, ...nukedCards],
+    pc: capturedCard,
     cc: nukeCard,
     cpuNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: 'CPU Nuke used! You captured 10 enemy cards!',
-    victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
+    m: `CPU used their NUKE! They stole 10 of your cards including ${getCardLabel(capturedCard.v)}!`,
+    victoryMessage: '☢️ NUCLEAR STRIKE RECEIVED! ☢️'
   };
-  verifyCardCount(newState, 'CPU_NUKE_ONLY');
+  verifyCardCount(newState, 'CPU_NUKE_STANDARD');
   return newState;
 }
 
