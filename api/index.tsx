@@ -157,8 +157,8 @@ type GameState = {
     ownsToken: boolean;
     balance: number;
   };
-  playerNukeAvailable?: boolean;
-  cpuNukeAvailable?: boolean;
+  playerNukeAvailable: boolean;
+  cpuNukeAvailable: boolean;
 };
 
 function getCardLabel(value: number): string {
@@ -187,20 +187,15 @@ function shuffle<T>(array: T[]): T[] {
 }
 
 function initializeGame(): GameState {
-  const regularDeck = createRegularDeck();
-  const playerNuke: Card = { v: 10, s: '☢️' };
-  const cpuNuke: Card = { v: 10, s: '☢️' };
+  const deck = shuffle(createRegularDeck()); // Only 52 cards
+  const midpoint = Math.floor(deck.length / 2);
   
-  // Add nukes and shuffle
-  const fullDeck = shuffle([...regularDeck, playerNuke, cpuNuke]);
-  const midpoint = Math.floor(fullDeck.length / 2);
-  
-  const initialState: GameState = {
-    p: fullDeck.slice(0, midpoint),
-    c: fullDeck.slice(midpoint),
+  return {
+    p: deck.slice(0, midpoint),
+    c: deck.slice(midpoint),
     pc: null,
     cc: null,
-    m: 'Welcome to War! Draw a card to begin. You have one nuke card available!',
+    m: 'Welcome to War! Draw a card to begin. You have one nuke ability!',
     w: false,
     lastDrawTime: Date.now(),
     playerNukeAvailable: true,
@@ -208,16 +203,6 @@ function initializeGame(): GameState {
     moveCount: 0,
     warCount: 0
   };
-
-  verifyCardCount(initialState, 'GAME_INIT');
-  console.log('Game initialized:', {
-    totalCards: fullDeck.length,
-    playerCards: initialState.p.length,
-    cpuCards: initialState.c.length,
-    nukeCardsAdded: 2
-  });
-
-  return initialState;
 }
 
 // 1. Add these functions at the top with other utility functions
@@ -572,97 +557,81 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 });
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
-function handleTurn(state: GameState, useNuke: boolean = false): GameState {
-  verifyCardCount(state, 'TURN_START');
-  const moveCount = (state.moveCount || 0) + 1;
-
-  // Handle nuke ability usage
-  if (useNuke && state.playerNukeAvailable) {
-    console.log('Player using nuke ability');
-    if (state.c.length <= 10) {
-      const nukeVictory = {
-        ...state,
-        p: [...state.p, ...state.c],
-        c: [],
-        playerNukeAvailable: false,
-        moveCount,
-        lastDrawTime: Date.now(),
-        m: 'NUCLEAR VICTORY! Your nuke completely destroyed CPU\'s forces!',
-        victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
-      };
-      verifyCardCount(nukeVictory, 'NUKE_VICTORY');
-      return nukeVictory;
-    }
-
-    const nukedCards = state.c.splice(-10);
-    const nukeStrike = {
+function handleNukeUse(state: GameState): GameState {
+  console.log('Processing player nuke use');
+  
+  if (state.c.length <= 10) {
+    // Total victory scenario
+    const nukeVictory = {
       ...state,
-      p: [...state.p, ...nukedCards],
+      p: [...state.p, ...state.c],
+      c: [],
       playerNukeAvailable: false,
-      moveCount,
+      moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: 'NUKE USED! You captured 10 enemy cards!',
-      victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
+      m: 'NUCLEAR VICTORY! Your nuke completely destroyed CPU\'s forces!',
+      victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
     };
-    verifyCardCount(nukeStrike, 'NUKE_STRIKE');
-    return nukeStrike;
+    verifyCardCount(nukeVictory, 'NUKE_VICTORY');
+    return nukeVictory;
   }
 
-  // Draw cards for regular turn
-  if (!state.p.length || !state.c.length) {
-    return {
+  // Standard nuke scenario
+  const nukedCards = state.c.splice(-10);
+  const nukeStrike = {
+    ...state,
+    p: [...state.p, ...nukedCards],
+    playerNukeAvailable: false,
+    moveCount: (state.moveCount || 0) + 1,
+    lastDrawTime: Date.now(),
+    m: 'NUKE USED! You captured 10 enemy cards!',
+    victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
+  };
+  verifyCardCount(nukeStrike, 'NUKE_STRIKE');
+  return nukeStrike;
+}
+
+function handleCpuNuke(state: GameState): GameState {
+  console.log('Processing CPU nuke use');
+  
+  if (state.p.length <= 10) {
+    // CPU total victory
+    const cpuNukeVictory = {
       ...state,
-      m: `Game Over! ${!state.c.length ? 'You' : 'CPU'} wins!`,
-      victoryMessage: !state.c.length ? '🎉 Victory! 🎉' : '💔 Defeat! 💔'
-    };
-  }
-
-  const pc = state.p.pop()!;
-  const cc = state.c.pop()!;
-
-  // CPU nuke logic - more strategic usage
-  if (state.cpuNukeAvailable && state.c.length < 15 && Math.random() < 0.3) {
-    // Return drawn cards before nuke
-    state.p.push(pc);
-    state.c.push(cc);
-    
-    console.log('CPU using nuke ability');
-    if (state.p.length <= 10) {
-      const cpuNukeVictory = {
-        ...state,
-        p: [],
-        c: [...state.c, ...state.p],
-        cpuNukeAvailable: false,
-        moveCount,
-        lastDrawTime: Date.now(),
-        m: 'CPU used their NUKE! Your forces were completely destroyed!',
-        victoryMessage: '☢️ NUCLEAR DEFEAT! ☢️'
-      };
-      verifyCardCount(cpuNukeVictory, 'CPU_NUKE_VICTORY');
-      return cpuNukeVictory;
-    }
-
-    const nukedCards = state.p.splice(-10);
-    const cpuNukeStrike = {
-      ...state,
-      c: [...state.c, ...nukedCards],
+      p: [],
+      c: [...state.c, ...state.p],
       cpuNukeAvailable: false,
-      moveCount,
+      moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: 'CPU used their NUKE! They captured 10 of your cards!',
-      victoryMessage: '☢️ NUCLEAR STRIKE RECEIVED! ☢️'
+      m: 'CPU used their NUKE! Your forces were completely destroyed!',
+      victoryMessage: '☢️ NUCLEAR DEFEAT! ☢️'
     };
-    verifyCardCount(cpuNukeStrike, 'CPU_NUKE_STRIKE');
-    return cpuNukeStrike;
+    verifyCardCount(cpuNukeVictory, 'CPU_NUKE_VICTORY');
+    return cpuNukeVictory;
   }
 
-  // Normal turn resolution
+  // Standard CPU nuke
+  const nukedCards = state.p.splice(-10);
+  const cpuNukeStrike = {
+    ...state,
+    c: [...state.c, ...nukedCards],
+    cpuNukeAvailable: false,
+    moveCount: (state.moveCount || 0) + 1,
+    lastDrawTime: Date.now(),
+    m: 'CPU used their NUKE! They captured 10 of your cards!',
+    victoryMessage: '☢️ NUCLEAR STRIKE RECEIVED! ☢️'
+  };
+  verifyCardCount(cpuNukeStrike, 'CPU_NUKE_STRIKE');
+  return cpuNukeStrike;
+}
+
+function handleNormalTurn(state: GameState, pc: Card, cc: Card): GameState {
   const winner = pc.v > cc.v ? 'p' : 'c';
   const normalTurn = {
     ...state,
     pc,
     cc,
-    moveCount,
+    moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
     w: false,
     p: winner === 'p' ? [...state.p, pc, cc] : state.p,
@@ -675,47 +644,20 @@ function handleTurn(state: GameState, useNuke: boolean = false): GameState {
 
 // Add the compression function
 function compressState(state: GameState): string {
-  // Essential game state for persistence
   const minState: GameState = {
-    // Core game state
-    p: state.p,
-    c: state.c,
-    pc: state.pc,
-    cc: state.cc,
-    m: state.m,
-    w: state.w,
-    
-    // War-related state
-    warPile: state.warPile,
-    warCount: state.warCount || 0,
-    
-    // Game progress
-    moveCount: state.moveCount || 0,
-    lastDrawTime: state.lastDrawTime,
-    
-    // UI state
-    username: state.username,
-    victoryMessage: state.victoryMessage,
-    
-    // Player data
-    fanTokenData: state.fanTokenData ? {
-      ownsToken: state.fanTokenData.ownsToken,
-      balance: state.fanTokenData.balance
-    } : undefined
+    ...state,
+    playerNukeAvailable: state.playerNukeAvailable,
+    cpuNukeAvailable: state.cpuNukeAvailable
   };
-
+  
   try {
     return Buffer.from(JSON.stringify(minState)).toString('base64');
   } catch (error) {
     console.error('State compression error:', error);
-    // Fallback to minimal state if compression fails
-    const fallbackState = {
-      p: state.p,
-      c: state.c,
-      m: 'Error saving game state',
-      w: false
-    };
-    return Buffer.from(JSON.stringify(fallbackState)).toString('base64');
+    return Buffer.from(JSON.stringify({
+      ...initializeGame(),
+      m: 'Error saving game state'
+    })).toString('base64');
   }
 }
 
@@ -814,96 +756,148 @@ function GameCard({ card }: { card: Card }) {
   );
 }
 
-// Game frame handler
+// Update styles object with new UI elements
+const styles = {
+  root: {
+    display: 'flex',
+    flexDirection: 'column',
+    width: '1080px',
+    height: '1080px',
+    backgroundColor: '#1a1a1a',
+    padding: '40px'
+  },
+  gamePanel: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '20px'
+  },
+  cooldownMessage: {
+    fontSize: '24px',
+    color: '#ff4444',
+    textAlign: 'center'
+  },
+  errorMessage: {
+    fontSize: '24px',
+    color: '#ff4444',
+    textAlign: 'center'
+  },
+  counter: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: '10px 20px',
+    color: 'white',
+    fontSize: '24px'
+  },
+  fanTokenIndicator: {
+    color: '#4ADE80',
+    fontSize: '20px',
+    marginBottom: '10px'
+  },
+  cardArea: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '20px',
+    marginBottom: '20px'
+  },
+  vsText: {
+    color: 'white',
+    fontSize: '32px',
+    margin: '0 20px'
+  },
+  messageArea: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '20px'
+  },
+  gameMessage: (isWar: boolean) => ({
+    fontSize: '32px',
+    color: isWar ? '#ff4444' : 'white',
+    textAlign: 'center' as const
+  }),
+  victoryMessage: {
+    fontSize: '48px',
+    color: '#4ADE80',
+    fontWeight: 'bold',
+    textAlign: 'center' as const
+  }
+} as const;
+
+// Update handleTurn to actually implement the logic instead of throwing
+function handleTurn(decodedState: GameState, useNuke: boolean): GameState {
+  verifyCardCount(decodedState, 'TURN_START');
+  
+  if (useNuke) {
+    return handleNukeUse(decodedState);
+  }
+
+  if (!decodedState.p.length || !decodedState.c.length) {
+    return {
+      ...decodedState,
+      m: `Game Over! ${!decodedState.c.length ? 'You' : 'CPU'} wins!`,
+      victoryMessage: !decodedState.c.length ? '🎉 Victory! 🎉' : '💔 Defeat! 💔'
+    };
+  }
+
+  const pc = decodedState.p.pop()!;
+  const cc = decodedState.c.pop()!;
+
+  // Check for CPU nuke opportunity
+  if (decodedState.cpuNukeAvailable && decodedState.c.length < 15 && Math.random() < 0.3) {
+    decodedState.p.push(pc);
+    decodedState.c.push(cc);
+    return handleCpuNuke(decodedState);
+  }
+
+  // Check for war
+  if (pc.v === cc.v) {
+    // Handle war logic
+    if (decodedState.p.length < 3 || decodedState.c.length < 3) {
+      const winner = decodedState.p.length >= decodedState.c.length ? 'p' : 'c';
+      return {
+        ...decodedState,
+        pc,
+        cc,
+        p: winner === 'p' ? [...decodedState.p, pc, cc] : [],
+        c: winner === 'c' ? [...decodedState.c, pc, cc] : [],
+        w: false,
+        m: `Not enough cards for war! ${winner === 'p' ? 'You' : 'Computer'} wins!`,
+        victoryMessage: winner === 'p' ? '🎉 Victory! 🎉' : '💔 Defeat! 💔'
+      };
+    }
+
+    return {
+      ...decodedState,
+      pc,
+      cc,
+      w: true,
+      warPile: [...decodedState.p.splice(-3), ...decodedState.c.splice(-3)].map(c => ({...c, hidden: true})),
+      m: 'WAR! Three cards face down...',
+      moveCount: (decodedState.moveCount || 0) + 1,
+      lastDrawTime: Date.now(),
+      warCount: (decodedState.warCount || 0) + 1
+    };
+  }
+
+  return handleNormalTurn(decodedState, pc, cc);
+}
+
+// Update game frame handler with new UI
 app.frame('/game', async (c) => {
   try {
-    console.log('Game frame handler started');
-    const startTime = Date.now();
-    
     const { buttonValue } = c;
     const fid = c.frameData?.fid;
     
-    console.log('Request details:', {
-      buttonValue: buttonValue ? 'exists' : 'none',
-      fid: fid ? 'exists' : 'none',
-      timestamp: new Date().toISOString()
-    });
-
-    // Get username and check tokens only if there's no buttonValue (new game)
+    let state: GameState;
     let username = 'Player';
     let fanTokenData = { ownsToken: false, balance: 0 };
 
-    // Define styles first
-    const styles = {
-      root: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '1080px',
-        height: '1080px',
-        backgroundColor: '#1a1a1a',
-        color: 'white',
-        padding: '40px'
-      },
-      gamePanel: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        padding: '40px',
-        borderRadius: '10px',
-        gap: '40px'
-      },
-      counter: {
-        display: 'flex',
-        gap: '40px',
-        fontSize: '24px',
-        color: 'white'
-      },
-      cardArea: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '40px'
-      },
-      vsText: {
-        fontSize: '36px',
-        fontWeight: 'bold',
-        color: 'white'
-      },
-      messageArea: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '20px'
-      },
-      gameMessage: (isWar: boolean) => ({
-        fontSize: '32px',
-        color: isWar ? '#ff4444' : 'white'
-      }),
-      warIndicator: {
-        fontSize: '48px',
-        color: '#ff4444',
-        fontWeight: 'bold'
-      },
-      victoryMessage: {
-        fontSize: '48px',
-        color: '#4ADE80',
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginTop: '20px'
-      },
-      fanTokenIndicator: {
-        fontSize: '18px',
-        color: '#4ADE80',
-        marginTop: '10px',
-        textAlign: 'center'
-      }
-    };
-
+    // Handle initial load
     if (!buttonValue && fid) {
       try {
-        // Do initial checks in parallel
         const [usernameResult, tokenData] = await Promise.all([
           getUsername(fid.toString()),
           checkFanTokenOwnership(fid.toString())
@@ -913,97 +907,59 @@ app.frame('/game', async (c) => {
       } catch (error) {
         console.error('Error during initial game setup:', error);
       }
-    } else if (buttonValue?.startsWith('draw:')) {
-      // Reuse the username from state but don't check tokens again
-      try {
-        const encodedState = buttonValue.split(':')[1];
-        const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
-        username = decodedState.username || 'Player';
-        fanTokenData = decodedState.fanTokenData || { ownsToken: false, balance: 0 };
-      } catch (error) {
-        console.error('Error decoding state:', error);
-      }
-    }
-
-    let state: GameState;
-    if (buttonValue?.startsWith('draw:')) {
-      try {
-        console.log('Processing draw action');
-        const encodedState = buttonValue.split(':')[1];
-        const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
-        
-        console.log('Game state before turn:', {
-          playerCards: decodedState.p.length,
-          cpuCards: decodedState.c.length,
-          isWar: decodedState.w,
-          warPileSize: decodedState.warPile?.length
-        });
-
-        if (isOnCooldown(decodedState.lastDrawTime)) {
-          console.log('Cooldown active, skipping turn');
-          return c.res({
-            image: (
-              <div style={styles.root}>
-                <div style={styles.gamePanel}>
-                  <span style={{
-                    fontSize: '24px',
-                    color: '#ff4444',
-                    textAlign: 'center'
-                  }}>
-                    Please wait a moment before drawing again...
-                  </span>
-                </div>
+      state = { ...initializeGame(), username, fanTokenData };
+    } 
+    // Handle button actions
+    else if (buttonValue?.startsWith('draw:') || buttonValue?.startsWith('nuke:')) {
+      const encodedState = buttonValue.split(':')[1];
+      const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
+      
+      if (isOnCooldown(decodedState.lastDrawTime)) {
+        return c.res({
+          image: (
+            <div style={styles.root}>
+              <div style={styles.gamePanel}>
+                <span style={styles.cooldownMessage}>
+                  Please wait a moment...
+                </span>
               </div>
-            ),
-            intents: [
-              <Button value={`draw:${buttonValue.split(':')[1]}`}>
-                Draw Card
-              </Button>
-            ]
-          });
-        }
-
-        decodedState.lastDrawTime = Date.now();
-        state = handleTurn(decodedState);
-        
-        console.log('Game state after turn:', {
-          playerCards: state.p.length,
-          cpuCards: state.c.length,
-          isWar: state.w,
-          warPileSize: state.warPile?.length,
-          message: state.m
+            </div>
+          ),
+          intents: [
+            <Button value={buttonValue}>
+              {buttonValue.startsWith('nuke:') ? 'Use Nuke ☢️' : 'Draw Card'}
+            </Button>
+          ]
         });
-
-        state.username = username;
-        state.fanTokenData = fanTokenData;
-      } catch (error) {
-        console.error('State processing error:', {
-          error,
-          buttonValue: buttonValue.substring(0, 100) // Log first 100 chars of button value
-        });
-        state = { ...initializeGame(), username, fanTokenData };
       }
+
+      username = decodedState.username || 'Player';
+      fanTokenData = decodedState.fanTokenData || { ownsToken: false, balance: 0 };
+      
+      state = handleTurn(decodedState, buttonValue.startsWith('nuke:'));
+      state.username = username;
+      state.fanTokenData = fanTokenData;
     } else {
       state = { ...initializeGame(), username, fanTokenData };
     }
 
     const isGameOver = !state.p.length || !state.c.length;
 
+    // Update game stats if game is over
     if (isGameOver && fid) {
-      const result = state.p.length > 0 ? 'win' : 'loss';
       try {
+        const result = state.p.length > 0 ? 'win' : 'loss';
         await updateGameStats(fid.toString(), result);
         const stats = await getGameStats(fid.toString());
-        console.log(`Updated stats for FID ${fid}:`, stats);
+        
+        // Add stats to victory message
+        state.victoryMessage = `${state.victoryMessage || ''}\nTotal Games: ${stats.gamesPlayed} | Wins: ${stats.wins}`;
       } catch (error) {
-        console.error('Error updating game stats:', error);
+        console.error('Error handling game stats:', error);
       }
     }
 
-    const endTime = Date.now();
-    console.log(`Game frame handler completed in ${endTime - startTime}ms`);
-    
-    // Return the existing game UI
+    // Use your existing UI components
     return c.res({
       image: (
         <div style={styles.root}>
@@ -1027,78 +983,51 @@ app.frame('/game', async (c) => {
                   <GameCard card={state.cc} />
                 </>
               ) : (
-                <span style={{ fontSize: '24px', color: 'white' }}>Draw a card to begin!</span>
+                <span style={{ fontSize: '24px', color: 'white' }}>
+                  Draw a card to begin!
+                </span>
+              )}
+              
+              {state.w && state.warPile && (
+                <div style={{ marginTop: '20px' }}>
+                  {state.warPile.map((card, index) => (
+                    <GameCard key={index} card={card} />
+                  ))}
+                </div>
               )}
             </div>
 
             <div style={styles.messageArea}>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '20px'
-              }}>
-                <span style={{
-                  fontSize: '32px',
-                  color: state.w ? '#ff4444' : 
-                        (state.m.includes('won the WAR') && state.m.includes('You')) ? '#4ADE80' : 'white',
-                  textAlign: 'center'
-                }}>
-                  {state.m}
+              <span style={styles.gameMessage(state.w)}>
+                {state.m}
+              </span>
+              {state.victoryMessage && (
+                <span style={styles.victoryMessage}>
+                  {state.victoryMessage}
                 </span>
-
-                {state.w && (
-                  <span style={{
-                    fontSize: '48px',
-                    color: '#ff4444',
-                    fontWeight: 'bold',
-                    textAlign: 'center'
-                  }}>
-                    WAR!
-                  </span>
-                )}
-
-                {state.victoryMessage && (
-                  <span style={{
-                    fontSize: '48px',
-                    color: '#4ADE80',
-                    fontWeight: 'bold',
-                    textAlign: 'center'
-                  }}>
-                    {state.victoryMessage}
-                  </span>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
       ),
       intents: [
-        <Button 
-          value={!isGameOver ? `draw:${compressState(state)}` : undefined}
-          action={isGameOver ? '/' : undefined}
-        >
-          {isGameOver ? 'Play Again' : state.w ? 'Draw War Cards' : 'Draw Card'}
-        </Button>
-      ]
+        state.playerNukeAvailable && !isGameOver && (
+          <Button value={`nuke:${compressState(state)}`}>Use Nuke ☢️</Button>
+        ),
+        !isGameOver && (
+          <Button value={`draw:${compressState(state)}`}>
+            {state.w ? 'Draw War Cards' : 'Draw Card'}
+          </Button>
+        ),
+        isGameOver && <Button action="/">Play Again</Button>
+      ].filter(Boolean)
     });
   } catch (error) {
     console.error('Critical error in game frame handler:', error);
-    // Return a graceful error message to the user
     return c.res({
       image: (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '1080px',
-          height: '1080px',
-          backgroundColor: '#1a1a1a',
-          color: 'white',
-          padding: '40px'
-        }}>
-          <span style={{ fontSize: '24px', color: '#ff4444' }}>
+        <div style={styles.root}>
+          <span style={styles.errorMessage}>
             Temporary server hiccup! Please try again.
           </span>
         </div>
