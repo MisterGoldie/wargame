@@ -1173,7 +1173,7 @@ app.frame('/game', async (c) => {
   }
 });
 
-// Add share route
+// Add share routeS
 app.frame('/share', async (c) => {
   const { frameData } = c;
   const fid = frameData?.fid;
