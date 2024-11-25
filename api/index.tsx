@@ -134,10 +134,10 @@ const MOXIE_API_URL = "https://api.studio.thegraph.com/query/23537/moxie_protoco
 
 // Define types
 interface Card {
+  [x: string]: any;
   v: number;
   s: string;
   hidden?: boolean;
-  isNuke?: boolean;
 }
 
 type GameState = {
@@ -575,16 +575,16 @@ app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState, useNuke: boolean = false): GameState {
   verifyCardCount(state, 'TURN_START');
 
-  // Handle nuke card usage
+  // Handle nuke ability usage
   if (useNuke && state.playerNukeAvailable) {
-    console.log('Player using nuke card');
+    console.log('Player activating nuke ability');
     if (state.c.length <= 10) {
       const nukeVictory = {
         ...state,
         p: [...state.p, ...state.c],
         c: [],
         playerNukeAvailable: false,
-        m: 'NUCLEAR VICTORY! Your nuke card destroyed all CPU cards!',
+        m: 'NUCLEAR VICTORY! Your nuke completely destroyed CPU\'s forces!',
         victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
       };
       verifyCardCount(nukeVictory, 'NUKE_VICTORY');
@@ -596,23 +596,23 @@ function handleTurn(state: GameState, useNuke: boolean = false): GameState {
       ...state,
       p: [...state.p, ...nukedCards],
       playerNukeAvailable: false,
-      m: 'NUKE CARD USED! You gained 10 cards from CPU!',
+      m: 'NUKE USED! You captured 10 enemy cards!',
       victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
     };
     verifyCardCount(nukeStrike, 'NUKE_STRIKE');
     return nukeStrike;
   }
 
-  // CPU nuke logic - triggers when CPU is losing badly
-  if (state.cpuNukeAvailable && state.c.length < 20 && Math.random() < 0.2) {
-    console.log('CPU using nuke card');
+  // CPU nuke ability - more strategic usage
+  if (state.cpuNukeAvailable && state.c.length < 15 && Math.random() < 0.3) {
+    console.log('CPU activating nuke ability');
     if (state.p.length <= 10) {
       const cpuNukeVictory = {
         ...state,
         p: [],
         c: [...state.c, ...state.p],
         cpuNukeAvailable: false,
-        m: 'CPU used their NUKE CARD! You were completely destroyed!',
+        m: 'CPU used their NUKE! Your forces were completely destroyed!',
         victoryMessage: '☢️ NUCLEAR DEFEAT! ☢️'
       };
       verifyCardCount(cpuNukeVictory, 'CPU_NUKE_VICTORY');
@@ -624,7 +624,7 @@ function handleTurn(state: GameState, useNuke: boolean = false): GameState {
       ...state,
       c: [...state.c, ...nukedCards],
       cpuNukeAvailable: false,
-      m: 'CPU used their NUKE CARD! They stole 10 of your cards!',
+      m: 'CPU used their NUKE! They captured 10 of your cards!',
       victoryMessage: '☢️ NUCLEAR STRIKE RECEIVED! ☢️'
     };
     verifyCardCount(cpuNukeStrike, 'CPU_NUKE_STRIKE');
