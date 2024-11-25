@@ -560,7 +560,12 @@ app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleNukeUse(state: GameState): GameState {
   console.log('Processing player nuke use');
   
-  const nukeCard: Card = { v: 0, s: '☢️', isNuke: true };
+  const nukeCard: Card = { 
+    v: 14, // Higher than King (13) for display purposes
+    s: '☢️', // Using nuke symbol directly
+    isNuke: true 
+  };
+  
   let newState: GameState;
   
   // Handle instant win case
@@ -581,10 +586,9 @@ function handleNukeUse(state: GameState): GameState {
     return newState;
   }
 
-  // Take 10 cards with nuke
   const nukedCards = state.c.splice(-10);
   
-  // Continue with a normal turn if possible
+  // Show nuke card first, then continue with normal turn
   if (state.p.length > 0 && state.c.length > 0) {
     const pc = state.p.pop()!;
     const cc = state.c.pop()!;
@@ -594,7 +598,7 @@ function handleNukeUse(state: GameState): GameState {
       ...state,
       p: [...state.p, ...nukedCards, ...(winner === 'p' ? [pc, cc] : [])],
       c: [...state.c, ...(winner === 'c' ? [pc, cc] : [])],
-      pc,
+      pc: nukeCard,
       cc,
       playerNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
@@ -606,7 +610,6 @@ function handleNukeUse(state: GameState): GameState {
     return newState;
   }
 
-  // Nuke-only result
   newState = {
     ...state,
     p: [...state.p, ...nukedCards],
@@ -779,13 +782,13 @@ function GameCard({ card }: { card: Card }) {
     );
   }
   
-  // New nuke card display
   if (card.isNuke) {
     return (
       <div style={{
         ...CardStyle,
-        backgroundColor: 'white',
-        color: '#000000'
+        backgroundColor: '#FF4444',
+        color: 'white',
+        border: '2px solid #FF0000'
       }}>
         <span style={{ fontSize: '24px' }}>NUKE</span>
         <span style={{ fontSize: '48px' }}>☢️</span>
@@ -796,7 +799,6 @@ function GameCard({ card }: { card: Card }) {
     );
   }
   
-  // Regular card styling
   return (
     <div style={{
       ...CardStyle,
