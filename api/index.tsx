@@ -569,7 +569,7 @@ function handleNukeUse(state: GameState): GameState {
   
   const nukeCard: Card = { 
     v: 10,
-    s: '♦',
+    s: '☢️',
     isNuke: true
   };
   
@@ -755,46 +755,27 @@ const CardStyle = {
 } as const;
 
 function GameCard({ card }: { card: Card }) {
-  if (card.hidden) {
-    return (
-      <div style={{
-        ...CardStyle,
-        backgroundColor: '#6B7280',
-        color: 'white'
-      }}>
-        <span style={{ fontSize: '24px' }}>🂠</span>
-      </div>
-    );
-  }
-  
   if (card.isNuke) {
     return (
       <div style={{
         ...CardStyle,
-        backgroundColor: '#FF4444',
+        backgroundColor: '#ff4444',
+        border: '2px solid #ffff00',
         color: 'white',
-        border: '2px solid #FF0000'
+        fontSize: '48px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
-        <span style={{ fontSize: '24px' }}>NUKE</span>
-        <span style={{ fontSize: '48px' }}>☢️</span>
-        <span style={{ fontSize: '24px', transform: 'rotate(180deg)' }}>
-          NUKE
-        </span>
+        ☢️
       </div>
     );
   }
   
   return (
-    <div style={{
-      ...CardStyle,
-      backgroundColor: 'white',
-      color: card.s === '♥' || card.s === '♦' ? '#ff0000' : '#000000'
-    }}>
-      <span style={{ fontSize: '24px' }}>{getCardLabel(card.v)}</span>
-      <span style={{ fontSize: '48px' }}>{card.s}</span>
-      <span style={{ fontSize: '24px', transform: 'rotate(180deg)' }}>
-        {getCardLabel(card.v)}
-      </span>
+    <div style={CardStyle}>
+      {getCardLabel(card.v)}
+      {card.s}
     </div>
   );
 }
