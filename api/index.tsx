@@ -820,139 +820,68 @@ const styles = {
   root: {
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
     width: '1080px',
     height: '1080px',
     backgroundColor: '#1a1a1a',
-    padding: '40px',
-    fontFamily: 'system-ui, -apple-system, sans-serif'
+    padding: '40px'
   },
   gamePanel: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: '40px',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: '60px',
-    borderRadius: '10px',
-    width: '90%',
-    maxWidth: '900px',
-    border: '2px solid rgba(255,255,255,0.1)',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
-  },
-  title: {
-    fontSize: '72px',
-    color: 'white',
-    margin: 0,
-    textAlign: 'center',
-    textShadow: '0 4px 8px rgba(0,0,0,0.5)'
-  },
-  subtitle: {
-    fontSize: '36px',
-    color: 'white',
-    margin: 0,
-    textAlign: 'center',
-    opacity: 0.9
-  },
-  featureList: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
     gap: '20px'
   },
-  featureTitle: {
+  cooldownMessage: {
     fontSize: '24px',
-    color: '#4ADE80',
-    textAlign: 'center',
-    textShadow: '0 0 10px rgba(74,222,128,0.3)'
+    color: '#ff4444',
+    textAlign: 'center'
+  },
+  errorMessage: {
+    fontSize: '24px',
+    color: '#ff4444',
+    textAlign: 'center'
   },
   counter: {
     display: 'flex',
-    width: '100%',
     justifyContent: 'space-between',
-    fontSize: '36px',
+    width: '100%',
+    padding: '10px 20px',
     color: 'white',
-    textShadow: '0 2px 4px rgba(0,0,0,0.5)',
-    padding: '0 20px',
-    fontWeight: '600'
+    fontSize: '24px'
+  },
+  fanTokenIndicator: {
+    color: '#4ADE80',
+    fontSize: '20px',
+    marginBottom: '10px'
   },
   cardArea: {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: '60px',
-    padding: '30px',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: '15px',
-    minHeight: '300px',
-    width: '100%',
-    justifyContent: 'center'
+    gap: '20px',
+    marginBottom: '20px'
   },
   vsText: {
-    fontSize: '48px',
-    fontWeight: 'bold',
-    color: '#ff4444',
-    textShadow: '0 0 10px rgba(255,68,68,0.5)',
-    transform: 'scale(1.2)',
-    transition: 'transform 0.3s ease'
+    color: 'white',
+    fontSize: '32px',
+    margin: '0 20px'
   },
   messageArea: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '24px',
-    width: '100%',
-    textAlign: 'center'
+    gap: '20px'
   },
   gameMessage: (isWar: boolean) => ({
-    fontSize: isWar ? '42px' : '36px',
-    color: isWar ? '#ff4444' : '#ffffff',
-    textShadow: isWar ? '0 0 10px rgba(255,68,68,0.5)' : '2px 2px 4px rgba(0,0,0,0.5)',
-    fontWeight: isWar ? 'bold' : 'normal',
-    animation: isWar ? 'pulse 2s infinite' : 'none'
+    fontSize: '32px',
+    color: isWar ? '#ff4444' : 'white',
+    textAlign: 'center' as const
   }),
   victoryMessage: {
     fontSize: '48px',
     color: '#4ADE80',
     fontWeight: 'bold',
-    textShadow: '0 0 20px rgba(74,222,128,0.5)',
-    animation: 'fadeIn 0.5s ease-out',
-    padding: '20px',
-    borderRadius: '10px',
-    backgroundColor: 'rgba(74,222,128,0.1)',
-    border: '2px solid #4ADE80'
-  },
-  fanTokenIndicator: {
-    fontSize: '24px',
-    color: '#4ADE80',
-    padding: '12px 24px',
-    backgroundColor: 'rgba(74,222,128,0.1)',
-    borderRadius: '10px',
-    border: '1px solid #4ADE80',
-    textShadow: '0 0 10px rgba(74,222,128,0.3)'
-  },
-  cooldownMessage: {
-    fontSize: '32px',
-    color: '#ff9900',
-    textAlign: 'center',
-    padding: '12px 24px',
-    backgroundColor: 'rgba(255,153,0,0.1)',
-    borderRadius: '10px',
-    border: '1px solid #ff9900',
-    textShadow: '0 0 10px rgba(255,153,0,0.3)',
-    animation: 'pulse 1s infinite'
-  },
-  errorMessage: {
-    fontSize: '32px',
-    color: '#ff4444',
-    textAlign: 'center',
-    padding: '12px 24px',
-    backgroundColor: 'rgba(255,68,68,0.1)',
-    borderRadius: '10px',
-    border: '1px solid #ff4444',
-    textShadow: '0 0 10px rgba(255,68,68,0.3)',
-    maxWidth: '80%'
+    textAlign: 'center' as const
   }
 } as const;
 
@@ -1112,22 +1041,32 @@ app.frame('/game', async (c) => {
             <div style={styles.cardArea}>
               {state.pc && state.cc ? (
                 <>
-                  <GameCard card={state.pc} />
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    <span style={{ color: '#4ADE80', fontSize: '24px' }}>{username}</span>
+                    <GameCard card={state.pc} />
+                  </div>
+                  
                   <span style={styles.vsText}>VS</span>
-                  <GameCard card={state.cc} />
+                  
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    <span style={{ color: '#ff4444', fontSize: '24px' }}>CPU</span>
+                    <GameCard card={state.cc} />
+                  </div>
                 </>
               ) : (
                 <span style={{ fontSize: '24px', color: 'white' }}>
                   Draw a card to begin!
                 </span>
-              )}
-              
-              {state.w && state.warPile && (
-                <div style={{ marginTop: '20px' }}>
-                  {state.warPile.map((card, index) => (
-                    <GameCard key={index} card={card} />
-                  ))}
-                </div>
               )}
             </div>
 
@@ -1173,7 +1112,7 @@ app.frame('/game', async (c) => {
   }
 });
 
-// Add share routeS
+// Add share route
 app.frame('/share', async (c) => {
   const { frameData } = c;
   const fid = frameData?.fid;
