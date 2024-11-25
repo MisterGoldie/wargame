@@ -1165,7 +1165,7 @@ function verifyCardCount(state: GameState, location: string): boolean {
   const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0);
   const expectedCards = 54; // 52 regular cards + 2 nuke cards
 
-  // Enhanced validation
+  // Enhanced validationS
   const isValid = totalCards === expectedCards;
 
   // Detailed state logging
