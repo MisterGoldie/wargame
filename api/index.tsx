@@ -591,7 +591,7 @@ function handleNukeUse(state: GameState): GameState {
       playerNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: `<span style="color: #4ADE80">Your</span> NUKE COMPLETELY DESTROYED CPU'S FORCES!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
+      m: `NUKE COMPLETELY DESTROYED CPU'S FORCES!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
       color: '#4ADE80',
       victoryMessage: '🎉 Victory! 🎉'
     };
@@ -611,7 +611,7 @@ function handleNukeUse(state: GameState): GameState {
     playerNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: `<span style="color: #4ADE80">Your</span> NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
+    m: `NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
     color: '#4ADE80'
   };
   verifyCardCount(newState, 'PLAYER_NUKE_WITH_TURN');
@@ -638,7 +638,7 @@ function handleCpuNuke(state: GameState): GameState {
       cpuNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: `<span style="color: #FF4444">CPU</span> NUKE COMPLETELY DESTROYED YOUR FORCES!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
+      m: `CPU NUKE COMPLETELY DESTROYED YOUR FORCES!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
       color: '#FF4444',
       victoryMessage: '💔 Defeat! 💔'
     };
@@ -657,7 +657,7 @@ function handleCpuNuke(state: GameState): GameState {
     cpuNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: `<span style="color: #FF4444">CPU</span> NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
+    m: `CPU NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
     color: '#FF4444'
   };
   verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
@@ -666,10 +666,6 @@ function handleCpuNuke(state: GameState): GameState {
 
 function handleNormalTurn(state: GameState, pc: Card, cc: Card): GameState {
   const winner = pc.v > cc.v ? 'p' : 'c';
-  const winnerText = winner === 'p' 
-    ? `<span style="color: #4ADE80">You</span>` 
-    : `<span style="color: #FF4444">Computer</span>`;
-  
   const normalTurn = {
     ...state,
     pc,
@@ -679,8 +675,7 @@ function handleNormalTurn(state: GameState, pc: Card, cc: Card): GameState {
     w: false,
     p: winner === 'p' ? [...state.p, pc, cc] : state.p,
     c: winner === 'c' ? [...state.c, pc, cc] : state.c,
-    m: `${winnerText} win${winner === 'p' ? '' : 's'} with ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!`,
-    color: winner === 'p' ? '#4ADE80' : '#FF4444'
+    m: `${winner === 'p' ? 'You' : 'Computer'} win${winner === 'p' ? '' : 's'} with ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!`
   };
   verifyCardCount(normalTurn, 'NORMAL_TURN');
   return normalTurn;
@@ -1072,7 +1067,7 @@ app.frame('/game', async (c) => {
         ),
         !isGameOver && (
           <Button value={`draw:${compressState(state)}`}>
-            {state.w ? 'Draw War Cards' : 'Draw Card 🃏'}
+            {state.w ? 'Draw War Cards' : 'Draw Card'}
           </Button>
         ),
         isGameOver && <Button action="/">Play Again</Button>
