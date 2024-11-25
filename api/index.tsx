@@ -159,6 +159,7 @@ type GameState = {
   };
   playerNukeAvailable: boolean;
   cpuNukeAvailable: boolean;
+  color?: string;
 };
 
 function getCardLabel(value: number): string {
@@ -201,7 +202,8 @@ function initializeGame(): GameState {
     playerNukeAvailable: true,
     cpuNukeAvailable: true,
     moveCount: 0,
-    warCount: 0
+    warCount: 0,
+    color: '#4ADE80'
   };
 }
 
@@ -540,10 +542,15 @@ async function checkFanTokenOwnership(fid: string): Promise<FanTokenData> {
 
 // Constants for nuke messages
 const NUKE_MESSAGES = {
-  INSTANT_WIN: '☢️ NUCLEAR VICTORY! ☢️',
-  REGULAR_USE: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️',
-  BUTTON: 'Use Nuke ☢️'
-} as const;
+  PLAYER: {
+    SUCCESS: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️',
+    color: '#4ADE80'  // Green
+  },
+  CPU: {
+    SUCCESS: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️',
+    color: '#FF4444'  // Red
+  }
+};
 
 // Create Frog app instance
 export const app = new Frog<{ Variables: NeynarVariables }>({
@@ -586,8 +593,9 @@ function handleNukeUse(state: GameState): GameState {
       playerNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: NUKE_MESSAGES.INSTANT_WIN,
-      victoryMessage: NUKE_MESSAGES.INSTANT_WIN
+      m: NUKE_MESSAGES.PLAYER.SUCCESS,
+      color: NUKE_MESSAGES.PLAYER.color,
+      victoryMessage: NUKE_MESSAGES.PLAYER.SUCCESS
     };
     verifyCardCount(newState, 'NUKE_INSTANT_WIN');
     return newState;
@@ -611,7 +619,8 @@ function handleNukeUse(state: GameState): GameState {
       playerNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: NUKE_MESSAGES.REGULAR_USE
+      m: NUKE_MESSAGES.PLAYER.SUCCESS,
+      color: NUKE_MESSAGES.PLAYER.color
     };
     verifyCardCount(newState, 'NUKE_WITH_TURN');
     return newState;
@@ -625,7 +634,8 @@ function handleNukeUse(state: GameState): GameState {
     playerNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: NUKE_MESSAGES.REGULAR_USE
+    m: NUKE_MESSAGES.PLAYER.SUCCESS,
+    color: NUKE_MESSAGES.PLAYER.color
   };
   verifyCardCount(newState, 'NUKE_ONLY');
   return newState;
@@ -647,8 +657,9 @@ function handleCpuNuke(state: GameState): GameState {
       cpuNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: 'NUCLEAR VICTORY! CPU\'s nuke completely destroyed your forces!',
-      victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
+      m: NUKE_MESSAGES.CPU.SUCCESS,
+      color: NUKE_MESSAGES.CPU.color,
+      victoryMessage: NUKE_MESSAGES.CPU.SUCCESS
     };
     verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
     return newState;
@@ -669,8 +680,8 @@ function handleCpuNuke(state: GameState): GameState {
       cpuNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: `CPU Nuke stole 10 cards! Then ${winner === 'p' ? 'you' : 'CPU'} won with ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!`,
-      victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
+      m: NUKE_MESSAGES.CPU.SUCCESS,
+      color: NUKE_MESSAGES.CPU.color
     };
     verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
     return newState;
@@ -684,8 +695,8 @@ function handleCpuNuke(state: GameState): GameState {
     cpuNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: 'CPU Nuke used! You captured 10 enemy cards!',
-    victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
+    m: NUKE_MESSAGES.CPU.SUCCESS,
+    color: NUKE_MESSAGES.CPU.color
   };
   verifyCardCount(newState, 'CPU_NUKE_ONLY');
   return newState;
@@ -1066,7 +1077,10 @@ app.frame('/game', async (c) => {
             </div>
 
             <div style={styles.messageArea}>
-              <span style={styles.gameMessage(state.w)}>
+              <span style={{
+                ...styles.gameMessage(state.w),
+                color: state.color || styles.gameMessage(state.w).color  // Use nuke color if set
+              }}>
                 {state.m}
               </span>
               {state.victoryMessage && (
@@ -1080,7 +1094,7 @@ app.frame('/game', async (c) => {
       ),
       intents: [
         state.playerNukeAvailable && !isGameOver && (
-          <Button value={`nuke:${compressState(state)}`}>{NUKE_MESSAGES.BUTTON}</Button>
+          <Button value={`nuke:${compressState(state)}`}>{NUKE_MESSAGES.PLAYER.SUCCESS}</Button>
         ),
         !isGameOver && (
           <Button value={`draw:${compressState(state)}`}>
