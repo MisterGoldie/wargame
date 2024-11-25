@@ -563,12 +563,31 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
         name: 'Silkscreen',
         source: 'google',
         weight: 400,
-      }
+      },
+      {
+        name: 'Silkscreen',
+        source: 'google',
+        weight: 700,
+      },
     ],
   },
   imageAspectRatio: '1:1',
-  title: 'WAR Card Game'
-});
+  title: 'WAR Card Game',
+  hub: {
+    apiUrl: "https://hubs.airstack.xyz",
+    fetchOptions: {
+      headers: {
+        "x-airstack-hubs": AIRSTACK_API_KEY,
+        "x-airstack-hubs-secondary": AIRSTACK_API_KEY_SECONDARY
+      }
+    }
+  }
+}).use(
+  neynar({
+    apiKey: NEYNAR_API_KEY, 
+    features: ['interactor', 'cast'],
+  })
+);
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleNukeUse(state: GameState): GameState {
