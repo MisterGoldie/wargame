@@ -638,7 +638,7 @@ function handleNukeUse(state: GameState): GameState {
 }
 
 function handleCpuNuke(state: GameState): GameState {
-  console.log('Processing CPU nuke use');
+  console.log('Starting CPU nuke process...');
   
   const nukeCard: Card = { 
     v: 10,
@@ -646,12 +646,16 @@ function handleCpuNuke(state: GameState): GameState {
     isNuke: true
   };
 
-  // Handle instant win case
-  if (state.p.length <= 10) {
+  // Create copies of decks to prevent mutation
+  const playerDeck = [...state.p];
+  const cpuDeck = [...state.c];
+
+  if (playerDeck.length <= 10) {
+    // Instant win case
     const newState = {
       ...state,
       p: [],
-      c: [...state.c, ...state.p],
+      c: [...cpuDeck, ...playerDeck],
       pc: null,
       cc: nukeCard,
       cpuNukeAvailable: false,
@@ -661,18 +665,19 @@ function handleCpuNuke(state: GameState): GameState {
       color: '#FF4444',
       victoryMessage: '💔 Defeat! 💔'
     };
+    console.log('CPU Nuke - Instant win state:', newState);
     verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
     return newState;
   }
 
-  // Take 10 cards with nuke - FIX: Create a copy of the cards first
-  const playerCards = [...state.p]; // Create a copy
-  const nukedCards = playerCards.splice(-10); // Take last 10 cards
-  
+  // Take last 10 cards from player
+  const nukedCards = playerDeck.splice(-10);
+  console.log('CPU Nuke - Cards taken:', nukedCards.length);
+
   const newState = {
     ...state,
-    p: playerCards, // Use the modified copy
-    c: [...state.c, ...nukedCards], // Add nuked cards to CPU deck
+    p: playerDeck,
+    c: [...cpuDeck, ...nukedCards],
     pc: null,
     cc: nukeCard,
     cpuNukeAvailable: false,
@@ -681,6 +686,13 @@ function handleCpuNuke(state: GameState): GameState {
     m: `CPU NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
     color: '#FF4444'
   };
+  
+  console.log('CPU Nuke - New state:', {
+    playerCards: newState.p.length,
+    cpuCards: newState.c.length,
+    nukeCard: newState.cc
+  });
+  
   verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
   return newState;
 }
@@ -1165,13 +1177,9 @@ function verifyCardCount(state: GameState, location: string): boolean {
     warPile: state.warPile?.length || 0,
     inPlay: (state.pc ? 1 : 0) + (state.cc ? 1 : 0)
   };
-  
+  // Enhanced validationS
   const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0);
   const expectedCards = 54; // 52 regular cards + 2 nuke cards
-
-  // Enhanced validationS
-  const isValid = totalCards === expectedCards;
-
   // Detailed state logging
   console.log(`🃏 ${location}:`, {
     total: totalCards,
@@ -1185,7 +1193,8 @@ function verifyCardCount(state: GameState, location: string): boolean {
       }
     }
   });
-
+  // Enhanced validationS
+  const isValid = totalCards === expectedCards;
   if (!isValid) {
     console.error(`❌ Card count error at ${location}:`, {
       total: totalCards,
@@ -1200,11 +1209,9 @@ function verifyCardCount(state: GameState, location: string): boolean {
       warState: state.w,
       moveCount: state.moveCount || 0
     });
-    
     if (process.env.NODE_ENV === 'development') {
       throw new Error(`Invalid card count at ${location}: ${totalCards} (expected ${expectedCards})`);
     }
   }
-
   return isValid;
 }
