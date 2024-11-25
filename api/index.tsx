@@ -676,7 +676,7 @@ function handleNormalTurn(state: GameState, pc: Card, cc: Card): GameState {
     p: winner === 'p' ? [...state.p, pc, cc] : state.p,
     c: winner === 'c' ? [...state.c, pc, cc] : state.c,
     m: `${winner === 'p' ? 'You' : 'Computer'} win${winner === 'p' ? '' : 's'} with ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!`,
-    color: winner === 'p' ? '#4ADE80' : '#FF4444'  // Set color based on winner
+    color: winner === 'p' ? '#4ADE80' : '#FF4444'
   };
   verifyCardCount(normalTurn, 'NORMAL_TURN');
   return normalTurn;
@@ -805,10 +805,13 @@ const styles = {
   },
   cardArea: {
     display: 'flex',
-    flexDirection: 'column',
+    justifyContent: 'center',
     alignItems: 'center',
     gap: '20px',
-    marginBottom: '20px'
+    padding: '20px',
+    position: 'relative',
+    width: '100%',
+    height: '300px'
   },
   vsText: {
     color: 'white',
@@ -848,6 +851,12 @@ const styles = {
     transform: 'translate(-50%, -50%)',
     zIndex: 10,
     boxShadow: '0 0 20px rgba(255, 68, 68, 0.5)'
+  },
+  cardContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '40px'
   }
 } as const;
 
@@ -1012,34 +1021,11 @@ app.frame('/game', async (c) => {
             )}
 
             <div style={styles.cardArea}>
-              {(state.pc || state.cc) ? (
-                <div style={{ position: 'relative', width: '100%', height: '300px' }}>
-                  {state.pc?.isNuke || state.cc?.isNuke ? (
-                    <>
-                      {state.pc && <GameCard card={state.pc} />}
-                      {state.cc && <GameCard card={state.cc} />}
-                    </>
-                  ) : (
-                    <>
-                      {state.pc && <GameCard card={state.pc} />}
-                      {state.pc && state.cc && <span style={styles.vsText}>VS</span>}
-                      {state.cc && <GameCard card={state.cc} />}
-                    </>
-                  )}
-                </div>
-              ) : (
-                <span style={{ fontSize: '24px', color: 'white' }}>
-                  Draw a card to begin!
-                </span>
-              )}
-              
-              {state.w && state.warPile && (
-                <div style={{ marginTop: '20px' }}>
-                  {state.warPile.map((card, index) => (
-                    <GameCard key={index} card={card} />
-                  ))}
-                </div>
-              )}
+              <div style={styles.cardContainer}>
+                {state.pc && <GameCard card={state.pc} />}
+                {state.pc && state.cc && <span style={styles.vsText}>VS</span>}
+                {state.cc && <GameCard card={state.cc} />}
+              </div>
             </div>
 
             <div style={styles.messageArea}>
@@ -1134,76 +1120,36 @@ function isOnCooldown(lastDrawTime: number | undefined): boolean {
 }
 
 function verifyCardCount(state: GameState, location: string): boolean {
-  // Add card uniqueness check
+  // Get all cards in play
   const allCards = [
     ...state.p,
     ...state.c,
     ...(state.warPile || []),
-    state.pc,
-    state.cc
-  ].filter(Boolean);
+    ...(state.pc ? [state.pc] : []),
+    ...(state.cc ? [state.cc] : [])
+  ];
   
-  const uniqueCards = new Set(allCards.map(card => card ? `${card.v}-${card.s}` : ''));
-  
-  if (uniqueCards.size !== allCards.length) {
-    console.error('Duplicate cards detected:', {
-      total: allCards.length,
-      unique: uniqueCards.size,
-      location
-    });
-    
-    if (process.env.NODE_ENV === 'development') {
-      throw new Error(`Duplicate cards detected at ${location}`);
+  // Check for duplicates
+  const cardMap = new Map();
+  allCards.forEach(card => {
+    if (!card.isNuke) {  // Ignore nuke cards in duplicate check
+      const cardKey = `${card.v}-${card.s}`;
+      if (cardMap.has(cardKey)) {
+        console.error(`Duplicate card found: ${cardKey} at ${location}`);
+      }
+      cardMap.set(cardKey, true);
     }
-  }
-  
-  // Calculate card counts including nuke cards
+  });
+
   const cardCounts = {
     playerDeck: state.p.length,
     cpuDeck: state.c.length,
     warPile: state.warPile?.length || 0,
     inPlay: (state.pc ? 1 : 0) + (state.cc ? 1 : 0)
   };
-  
+
   const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0);
   const expectedCards = 54; // 52 regular cards + 2 nuke cards
 
-  // Enhanced validationS
-  const isValid = totalCards === expectedCards;
-
-  // Detailed state logging
-  console.log(`🃏 ${location}:`, {
-    total: totalCards,
-    breakdown: cardCounts,
-    gameState: {
-      isWar: state.w,
-      moveCount: state.moveCount || 0,
-      nukeStatus: {
-        playerNukeAvailable: state.playerNukeAvailable,
-        cpuNukeAvailable: state.cpuNukeAvailable
-      }
-    }
-  });
-
-  if (!isValid) {
-    console.error(`❌ Card count error at ${location}:`, {
-      total: totalCards,
-      expected: expectedCards,
-      missing: expectedCards - totalCards,
-      breakdown: cardCounts,
-      message: state.m,
-      nukeStatus: {
-        player: state.playerNukeAvailable,
-        cpu: state.cpuNukeAvailable
-      },
-      warState: state.w,
-      moveCount: state.moveCount || 0
-    });
-    
-    if (process.env.NODE_ENV === 'development') {
-      throw new Error(`Invalid card count at ${location}: ${totalCards} (expected ${expectedCards})`);
-    }
-  }
-
-  return isValid;
+  return totalCards === expectedCards;
 }
