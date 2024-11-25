@@ -160,6 +160,7 @@ type GameState = {
   playerNukeAvailable: boolean;
   cpuNukeAvailable: boolean;
   color?: string;
+  colorResetPending: boolean;
 };
 
 function getCardLabel(value: number): string {
@@ -203,7 +204,8 @@ function initializeGame(): GameState {
     cpuNukeAvailable: true,
     moveCount: 0,
     warCount: 0,
-    color: '#4ADE80'
+    color: '#4ADE80',
+    colorResetPending: false
   };
 }
 
@@ -640,17 +642,19 @@ function handleCpuNuke(state: GameState): GameState {
       lastDrawTime: Date.now(),
       m: `CPU NUKE COMPLETELY DESTROYED YOUR FORCES!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
       color: '#FF4444',
-      victoryMessage: '💔 Defeat! 💔'
+      victoryMessage: '💔 Defeat! 💔',
+      colorResetPending: true
     };
     verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
     return newState;
   }
 
-  const nukedCards = state.p.splice(-10);
+  const playerCards = [...state.p];
+  const nukedCards = playerCards.splice(-10);
   
   const newState = {
     ...state,
-    p: [...state.p],
+    p: playerCards,
     c: [...state.c, ...nukedCards],
     pc: null,
     cc: nukeCard,
@@ -658,7 +662,8 @@ function handleCpuNuke(state: GameState): GameState {
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
     m: `CPU NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
-    color: '#FF4444'
+    color: '#FF4444',
+    colorResetPending: true
   };
   verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
   return newState;
@@ -865,6 +870,15 @@ const styles = {
 
 // Update handleTurn to actually implement the logic instead of throwing
 function handleTurn(state: GameState, useNuke: boolean = false): GameState {
+  // Reset color if it was pending from previous nuke
+  if (state.colorResetPending) {
+    state = {
+      ...state,
+      color: undefined,
+      colorResetPending: false
+    };
+  }
+  
   verifyCardCount(state, 'TURN_START');
   
   if (useNuke) {
