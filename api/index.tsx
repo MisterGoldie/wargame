@@ -134,10 +134,10 @@ const MOXIE_API_URL = "https://api.studio.thegraph.com/query/23537/moxie_protoco
 
 // Define types
 interface Card {
-  [x: string]: any;
   v: number;
   s: string;
   hidden?: boolean;
+  isNuke?: boolean;
 }
 
 type GameState = {
@@ -188,8 +188,8 @@ function shuffle<T>(array: T[]): T[] {
 
 function initializeGame(): GameState {
   const regularDeck = createRegularDeck();
-  const playerNuke: Card = { v: 10, s: '☢️', isNuke: true };
-  const cpuNuke: Card = { v: 10, s: '☢️', isNuke: true };
+  const playerNuke: Card = { v: 10, s: '☢️' };
+  const cpuNuke: Card = { v: 10, s: '☢️' };
   
   // Add nukes and shuffle
   const fullDeck = shuffle([...regularDeck, playerNuke, cpuNuke]);
@@ -574,16 +574,19 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleTurn(state: GameState, useNuke: boolean = false): GameState {
   verifyCardCount(state, 'TURN_START');
+  const moveCount = (state.moveCount || 0) + 1;
 
   // Handle nuke ability usage
   if (useNuke && state.playerNukeAvailable) {
-    console.log('Player activating nuke ability');
+    console.log('Player using nuke ability');
     if (state.c.length <= 10) {
       const nukeVictory = {
         ...state,
         p: [...state.p, ...state.c],
         c: [],
         playerNukeAvailable: false,
+        moveCount,
+        lastDrawTime: Date.now(),
         m: 'NUCLEAR VICTORY! Your nuke completely destroyed CPU\'s forces!',
         victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
       };
@@ -596,6 +599,8 @@ function handleTurn(state: GameState, useNuke: boolean = false): GameState {
       ...state,
       p: [...state.p, ...nukedCards],
       playerNukeAvailable: false,
+      moveCount,
+      lastDrawTime: Date.now(),
       m: 'NUKE USED! You captured 10 enemy cards!',
       victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
     };
@@ -603,15 +608,33 @@ function handleTurn(state: GameState, useNuke: boolean = false): GameState {
     return nukeStrike;
   }
 
-  // CPU nuke ability - more strategic usage
+  // Draw cards for regular turn
+  if (!state.p.length || !state.c.length) {
+    return {
+      ...state,
+      m: `Game Over! ${!state.c.length ? 'You' : 'CPU'} wins!`,
+      victoryMessage: !state.c.length ? '🎉 Victory! 🎉' : '💔 Defeat! 💔'
+    };
+  }
+
+  const pc = state.p.pop()!;
+  const cc = state.c.pop()!;
+
+  // CPU nuke logic - more strategic usage
   if (state.cpuNukeAvailable && state.c.length < 15 && Math.random() < 0.3) {
-    console.log('CPU activating nuke ability');
+    // Return drawn cards before nuke
+    state.p.push(pc);
+    state.c.push(cc);
+    
+    console.log('CPU using nuke ability');
     if (state.p.length <= 10) {
       const cpuNukeVictory = {
         ...state,
         p: [],
         c: [...state.c, ...state.p],
         cpuNukeAvailable: false,
+        moveCount,
+        lastDrawTime: Date.now(),
         m: 'CPU used their NUKE! Your forces were completely destroyed!',
         victoryMessage: '☢️ NUCLEAR DEFEAT! ☢️'
       };
@@ -624,6 +647,8 @@ function handleTurn(state: GameState, useNuke: boolean = false): GameState {
       ...state,
       c: [...state.c, ...nukedCards],
       cpuNukeAvailable: false,
+      moveCount,
+      lastDrawTime: Date.now(),
       m: 'CPU used their NUKE! They captured 10 of your cards!',
       victoryMessage: '☢️ NUCLEAR STRIKE RECEIVED! ☢️'
     };
@@ -631,112 +656,19 @@ function handleTurn(state: GameState, useNuke: boolean = false): GameState {
     return cpuNukeStrike;
   }
 
-  // Continue with regular turn logic
-  const moveCount = (state.moveCount || 0) + 1;
-  const shouldForceWar = moveCount % 12 === 0;
-  
-  // Draw cardsS
-  const pc = state.p.pop()!;
-  const cc = state.c.pop()!;
-  const forcedPc = shouldForceWar ? { ...pc, v: 10 } : pc;
-  const forcedCc = shouldForceWar ? { ...cc, v: 10 } : cc;
-
-  console.log('Turn progress:', {
-    playerCard: `${getCardLabel(forcedPc.v)}${forcedPc.s}`,
-    cpuCard: `${getCardLabel(forcedCc.v)}${forcedCc.s}`,
-    isWar: state.w,
-    forcedWar: shouldForceWar,
-    deckSizes: {
-      player: state.p.length,
-      cpu: state.c.length,
-      warPile: state.warPile?.length || 0
-    }
-  });
-
-  // War resolution
-  if (state.w && state.warPile) {
-    const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
-    const allCards = [...state.warPile, forcedPc, forcedCc];
-    
-    const warResolution = {
-      ...state,
-      pc: forcedPc,
-      cc: forcedCc,
-      moveCount,
-      w: false,
-      warPile: undefined,
-      p: winner === 'p' ? [...state.p, ...allCards] : state.p,
-      c: winner === 'c' ? [...state.c, ...allCards] : state.c,
-      m: `${winner === 'p' ? 'You' : 'Computer'} won the WAR with ${getCardLabel(winner === 'p' ? forcedPc.v : forcedCc.v)} against ${getCardLabel(winner === 'p' ? forcedCc.v : forcedPc.v)}! (+${allCards.length} cards)`,
-      victoryMessage: winner === 'p' ? '🎉 WAR VICTORY! 🎉' : '💔 WAR LOST! 💔',
-      warCount: (state.warCount || 0) + 1
-    };
-
-    verifyCardCount(warResolution, 'WAR_RESOLUTION');
-    console.log('War resolution:', {
-      winner: winner === 'p' ? 'player' : 'cpu',
-      playerCards: warResolution.p.length,
-      cpuCards: warResolution.c.length,
-      cardsWon: allCards.length
-    });
-    return warResolution;
-  }
-
-  // Check for war start
-  if (forcedPc.v === forcedCc.v || shouldForceWar) {
-    // Not enough cards check
-    if (state.p.length < 3 || state.c.length < 3) {
-      const winner = state.p.length >= state.c.length ? 'p' : 'c';
-      const loserCards = winner === 'p' ? state.c : state.p;
-      
-      const insufficientCards = {
-        ...state,
-        pc: forcedPc,
-        cc: forcedCc,
-        moveCount,
-        w: false,
-        p: winner === 'p' ? [...state.p, ...loserCards, forcedPc, forcedCc] : [],
-        c: winner === 'c' ? [...state.c, ...loserCards, forcedPc, forcedCc] : [],
-        m: `Not enough cards for war! ${winner === 'p' ? 'You' : 'Computer'} wins all remaining cards!`,
-        victoryMessage: winner === 'p' ? '🎉 War Victory! 🎉' : '💔 War Lost! 💔'
-      };
-
-      verifyCardCount(insufficientCards, 'WAR_INSUFFICIENT');
-      return insufficientCards;
-    }
-
-    // Draw war cards
-    const pWarCards = state.p.splice(-3).map(c => ({...c, hidden: true}));
-    const cWarCards = state.c.splice(-3).map(c => ({...c, hidden: true}));
-    
-    const warStart = {
-      ...state,
-      pc: forcedPc,
-      cc: forcedCc,
-      moveCount,
-      w: true,
-      warPile: [...pWarCards, ...cWarCards],
-      m: shouldForceWar ? "FORCED WAR! Place 3 cards face down..." : "WAR! Equal cards! Place 3 cards face down...",
-      victoryMessage: undefined
-    };
-
-    verifyCardCount(warStart, 'WAR_START');
-    return warStart;
-  }
-
-  // Normal turn
-  const winner = forcedPc.v > forcedCc.v ? 'p' : 'c';
+  // Normal turn resolution
+  const winner = pc.v > cc.v ? 'p' : 'c';
   const normalTurn = {
     ...state,
-    pc: forcedPc,
-    cc: forcedCc,
+    pc,
+    cc,
     moveCount,
+    lastDrawTime: Date.now(),
     w: false,
-    p: winner === 'p' ? [...state.p, forcedPc, forcedCc] : state.p,
-    c: winner === 'c' ? [...state.c, forcedPc, forcedCc] : state.c,
-    m: `${winner === 'p' ? 'You' : 'Computer'} win${winner === 'p' ? '' : 's'} with ${getCardLabel(winner === 'p' ? forcedPc.v : forcedCc.v)}!`
+    p: winner === 'p' ? [...state.p, pc, cc] : state.p,
+    c: winner === 'c' ? [...state.c, pc, cc] : state.c,
+    m: `${winner === 'p' ? 'You' : 'Computer'} win${winner === 'p' ? '' : 's'} with ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!`
   };
-
   verifyCardCount(normalTurn, 'NORMAL_TURN');
   return normalTurn;
 }
