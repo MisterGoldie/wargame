@@ -1024,7 +1024,7 @@ app.frame('/game', async (c) => {
 
     const isGameOver = !state.p.length || !state.c.length;
 
-    // Update game stats if game is over
+    // Update game stats if game is overS
     if (isGameOver && fid) {
       try {
         const result = state.p.length > 0 ? 'win' : 'loss';
