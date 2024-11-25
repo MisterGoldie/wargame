@@ -665,12 +665,14 @@ function handleCpuNuke(state: GameState): GameState {
     return newState;
   }
 
-  const nukedCards = state.p.splice(-10);
+  // Take 10 cards with nuke - FIX: Create a copy of the cards first
+  const playerCards = [...state.p]; // Create a copy
+  const nukedCards = playerCards.splice(-10); // Take last 10 cards
   
   const newState = {
     ...state,
-    p: [...state.p],
-    c: [...state.c, ...nukedCards],
+    p: playerCards, // Use the modified copy
+    c: [...state.c, ...nukedCards], // Add nuked cards to CPU deck
     pc: null,
     cc: nukeCard,
     cpuNukeAvailable: false,
