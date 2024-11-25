@@ -832,15 +832,41 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '48px',
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    gap: '40px',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     padding: '60px',
-    borderRadius: '20px',
+    borderRadius: '10px',
     width: '90%',
     maxWidth: '900px',
     border: '2px solid rgba(255,255,255,0.1)',
     boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+  },
+  title: {
+    fontSize: '72px',
+    color: 'white',
+    margin: 0,
+    textAlign: 'center',
+    textShadow: '0 4px 8px rgba(0,0,0,0.5)'
+  },
+  subtitle: {
+    fontSize: '36px',
+    color: 'white',
+    margin: 0,
+    textAlign: 'center',
+    opacity: 0.9
+  },
+  featureList: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '20px'
+  },
+  featureTitle: {
+    fontSize: '24px',
+    color: '#4ADE80',
+    textAlign: 'center',
+    textShadow: '0 0 10px rgba(74,222,128,0.3)'
   },
   counter: {
     display: 'flex',
