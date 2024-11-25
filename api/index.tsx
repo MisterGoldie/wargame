@@ -647,25 +647,6 @@ function handleCpuNuke(state: GameState): GameState {
   const nukeCard: Card = { v: 0, s: '☢️', isNuke: true };
   let newState: GameState;
   
-  // Handle instant win case
-  if (state.p.length <= 10) {
-    newState = {
-      ...state,
-      p: [],
-      c: [...state.c, ...state.p],
-      pc: null,
-      cc: nukeCard,
-      cpuNukeAvailable: false,
-      moveCount: (state.moveCount || 0) + 1,
-      lastDrawTime: Date.now(),
-      m: NUKE_MESSAGES.CPU.SUCCESS,
-      color: NUKE_MESSAGES.CPU.color,
-      victoryMessage: NUKE_MESSAGES.CPU.SUCCESS
-    };
-    verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
-    return newState;
-  }
-
   // Take 10 cards with nuke
   const nukedCards = state.p.splice(-10);
   
@@ -680,7 +661,7 @@ function handleCpuNuke(state: GameState): GameState {
       p: [...state.p, ...(winner === 'p' ? [pc, cc] : [])],
       c: [...state.c, ...nukedCards, ...(winner === 'c' ? [pc, cc] : [])],
       pc,
-      cc,
+      cc: nukeCard,  // Show the nuke card instead of the regular card
       cpuNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
