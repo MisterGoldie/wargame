@@ -353,7 +353,38 @@ async function getVestingContractAddress(beneficiaryAddresses: string[]): Promis
   }
 }
 
+// API Cache interface
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  attempts: number;
+}
+
+// Global cache with type safety
+const API_CACHE = new Map<string, CacheEntry<TokenHolding[] | null>>();
+
 async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | null> {
+  const cacheKey = addresses.sort().join(',');
+  const cacheDuration = 60 * 1000; // 1 minute cache
+  const maxAttempts = 5; // Rate limit threshold
+  
+  const cachedEntry = API_CACHE.get(cacheKey);
+  const now = Date.now();
+  
+  // Check cache validity
+  if (cachedEntry) {
+    const isValid = (now - cachedEntry.timestamp) < cacheDuration;
+    const isRateLimited = cachedEntry.attempts >= maxAttempts;
+    
+    if (isValid && (isRateLimited || cachedEntry.data !== null)) {
+      console.log('Using cached fan token data:', {
+        age: Math.round((now - cachedEntry.timestamp) / 1000) + 's',
+        attempts: cachedEntry.attempts
+      });
+      return cachedEntry.data;
+    }
+  }
+
   const graphQLClient = new GraphQLClient(MOXIE_API_URL);
   
   const query = gql`
@@ -379,16 +410,35 @@ async function getOwnedFanTokens(addresses: string[]): Promise<TokenHolding[] | 
     };
     
     const data = await graphQLClient.request<PortfolioResponse>(query, variables);
-    console.log('Fan token data:', JSON.stringify(data, null, 2));
     
-    // Filter for only the /thepod token
+    // Process and cache response
     const podTokens = data.users?.[0]?.portfolio?.filter(token => 
       token.subjectToken.symbol === "cid:thepod"
     ) || null;
 
+    API_CACHE.set(cacheKey, {
+      data: podTokens,
+      timestamp: now,
+      attempts: 0
+    });
+
     return podTokens;
   } catch (error) {
-    console.error('Error fetching fan tokens:', error);
+    console.error('Fan token fetch error:', error);
+    
+    // Update cache with attempt count
+    if (cachedEntry) {
+      API_CACHE.set(cacheKey, {
+        ...cachedEntry,
+        attempts: cachedEntry.attempts + 1
+      });
+      
+      if (typeof error === 'object' && error !== null && 'response' in error && (error as any).response?.status === 429 && cachedEntry.data !== null) {
+        console.log('Rate limited, using cached data');
+        return cachedEntry.data;
+      }
+    }
+    
     return null;
   }
 }
