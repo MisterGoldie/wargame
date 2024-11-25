@@ -1038,23 +1038,38 @@ app.frame('/game', async (c) => {
 
             <div style={styles.cardArea}>
               {state.pc && state.cc ? (
-                <>
-                  <GameCard card={state.pc} />
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '40px'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '10px' 
+                  }}>
+                    <span style={{ color: 'white', fontSize: '24px' }}>{username}</span>
+                    <GameCard card={state.pc} />
+                  </div>
+
                   <span style={styles.vsText}>VS</span>
-                  <GameCard card={state.cc} />
-                </>
+
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '10px'
+                  }}>
+                    <span style={{ color: 'white', fontSize: '24px' }}>CPU</span>
+                    <GameCard card={state.cc} />
+                  </div>
+                </div>
               ) : (
                 <span style={{ fontSize: '24px', color: 'white' }}>
                   Draw a card to begin!
                 </span>
-              )}
-              
-              {state.w && state.warPile && (
-                <div style={{ marginTop: '20px' }}>
-                  {state.warPile.map((card, index) => (
-                    <GameCard key={index} card={card} />
-                  ))}
-                </div>
               )}
             </div>
 
