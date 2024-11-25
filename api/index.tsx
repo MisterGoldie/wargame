@@ -573,11 +573,9 @@ function handleNukeUse(state: GameState): GameState {
     isNuke: true
   };
   
-  let newState: GameState;
-  
   // Handle instant win case
   if (state.c.length <= 10) {
-    newState = {
+    const newState = {
       ...state,
       p: [...state.p, ...state.c],
       c: [],
@@ -586,8 +584,8 @@ function handleNukeUse(state: GameState): GameState {
       playerNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: NUKE_MESSAGES.INSTANT_WIN,
-      victoryMessage: NUKE_MESSAGES.INSTANT_WIN
+      m: 'NUCLEAR VICTORY! Your nuke completely destroyed CPU\'s forces!',
+      victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
     };
     verifyCardCount(newState, 'NUKE_INSTANT_WIN');
     return newState;
@@ -596,28 +594,8 @@ function handleNukeUse(state: GameState): GameState {
   // Take 10 cards with nuke
   const nukedCards = state.c.splice(-10);
   
-  // Continue with a normal turn after showing nuke
-  if (state.p.length > 0 && state.c.length > 0) {
-    const pc = state.p.pop()!;
-    const cc = state.c.pop()!;
-    const winner = pc.v > cc.v ? 'p' : 'c';
-    
-    newState = {
-      ...state,
-      p: [...state.p, ...nukedCards, ...(winner === 'p' ? [pc, cc] : [])],
-      c: [...state.c, ...(winner === 'c' ? [pc, cc] : [])],
-      pc: nukeCard,
-      cc,
-      playerNukeAvailable: false,
-      moveCount: (state.moveCount || 0) + 1,
-      lastDrawTime: Date.now(),
-      m: NUKE_MESSAGES.REGULAR_USE
-    };
-    verifyCardCount(newState, 'NUKE_WITH_TURN');
-    return newState;
-  }
-
-  newState = {
+  // Show ONLY the m message, no victoryMessage
+  const newState = {
     ...state,
     p: [...state.p, ...nukedCards],
     pc: nukeCard,
@@ -625,7 +603,8 @@ function handleNukeUse(state: GameState): GameState {
     playerNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: NUKE_MESSAGES.REGULAR_USE
+    m: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️',
+    victoryMessage: undefined  // Explicitly clear any victory message
   };
   verifyCardCount(newState, 'NUKE_ONLY');
   return newState;
