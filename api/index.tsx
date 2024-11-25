@@ -1024,11 +1024,11 @@ app.frame('/game', async (c) => {
             )}
 
             <div style={styles.cardArea}>
-              {state.pc && state.cc ? (
+              {(state.pc || state.cc) ? (
                 <>
-                  <GameCard card={state.pc} />
-                  <span style={styles.vsText}>VS</span>
-                  <GameCard card={state.cc} />
+                  {state.pc && <GameCard card={state.pc} />}
+                  {state.pc && state.cc && <span style={styles.vsText}>VS</span>}
+                  {state.cc && <GameCard card={state.cc} />}
                 </>
               ) : (
                 <span style={{ fontSize: '24px', color: 'white' }}>
