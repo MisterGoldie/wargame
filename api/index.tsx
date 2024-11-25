@@ -563,31 +563,12 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
         name: 'Silkscreen',
         source: 'google',
         weight: 400,
-      },
-      {
-        name: 'Silkscreen',
-        source: 'google',
-        weight: 700,
-      },
+      }
     ],
   },
   imageAspectRatio: '1:1',
-  title: 'WAR Card Game',
-  hub: {
-    apiUrl: "https://hubs.airstack.xyz",
-    fetchOptions: {
-      headers: {
-        "x-airstack-hubs": AIRSTACK_API_KEY,
-        "x-airstack-hubs-secondary": AIRSTACK_API_KEY_SECONDARY
-      }
-    }
-  }
-}).use(
-  neynar({
-    apiKey: NEYNAR_API_KEY, 
-    features: ['interactor', 'cast'],
-  })
-);
+  title: 'WAR Card Game'
+});
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleNukeUse(state: GameState): GameState {
@@ -638,7 +619,7 @@ function handleNukeUse(state: GameState): GameState {
 }
 
 function handleCpuNuke(state: GameState): GameState {
-  console.log('Starting CPU nuke process...');
+  console.log('Processing CPU nuke use');
   
   const nukeCard: Card = { 
     v: 10,
@@ -646,16 +627,12 @@ function handleCpuNuke(state: GameState): GameState {
     isNuke: true
   };
 
-  // Create copies of decks to prevent mutation
-  const playerDeck = [...state.p];
-  const cpuDeck = [...state.c];
-
-  if (playerDeck.length <= 10) {
-    // Instant win case
+  // Handle instant win case
+  if (state.p.length <= 10) {
     const newState = {
       ...state,
       p: [],
-      c: [...cpuDeck, ...playerDeck],
+      c: [...state.c, ...state.p],
       pc: null,
       cc: nukeCard,
       cpuNukeAvailable: false,
@@ -665,19 +642,16 @@ function handleCpuNuke(state: GameState): GameState {
       color: '#FF4444',
       victoryMessage: '💔 Defeat! 💔'
     };
-    console.log('CPU Nuke - Instant win state:', newState);
     verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
     return newState;
   }
 
-  // Take last 10 cards from player
-  const nukedCards = playerDeck.splice(-10);
-  console.log('CPU Nuke - Cards taken:', nukedCards.length);
-
+  const nukedCards = state.p.splice(-10);
+  
   const newState = {
     ...state,
-    p: playerDeck,
-    c: [...cpuDeck, ...nukedCards],
+    p: [...state.p],
+    c: [...state.c, ...nukedCards],
     pc: null,
     cc: nukeCard,
     cpuNukeAvailable: false,
@@ -686,13 +660,6 @@ function handleCpuNuke(state: GameState): GameState {
     m: `CPU NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
     color: '#FF4444'
   };
-  
-  console.log('CPU Nuke - New state:', {
-    playerCards: newState.p.length,
-    cpuCards: newState.c.length,
-    nukeCard: newState.cc
-  });
-  
   verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
   return newState;
 }
@@ -1177,9 +1144,13 @@ function verifyCardCount(state: GameState, location: string): boolean {
     warPile: state.warPile?.length || 0,
     inPlay: (state.pc ? 1 : 0) + (state.cc ? 1 : 0)
   };
-  // Enhanced validationS
+  
   const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0);
   const expectedCards = 54; // 52 regular cards + 2 nuke cards
+
+  // Enhanced validationS
+  const isValid = totalCards === expectedCards;
+
   // Detailed state logging
   console.log(`🃏 ${location}:`, {
     total: totalCards,
@@ -1193,8 +1164,7 @@ function verifyCardCount(state: GameState, location: string): boolean {
       }
     }
   });
-  // Enhanced validationS
-  const isValid = totalCards === expectedCards;
+
   if (!isValid) {
     console.error(`❌ Card count error at ${location}:`, {
       total: totalCards,
@@ -1209,9 +1179,11 @@ function verifyCardCount(state: GameState, location: string): boolean {
       warState: state.w,
       moveCount: state.moveCount || 0
     });
+    
     if (process.env.NODE_ENV === 'development') {
       throw new Error(`Invalid card count at ${location}: ${totalCards} (expected ${expectedCards})`);
     }
   }
+
   return isValid;
 }
