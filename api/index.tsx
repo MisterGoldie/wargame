@@ -580,11 +580,9 @@ function handleNukeUse(state: GameState): GameState {
     isNuke: true
   };
   
-  let newState: GameState;
-  
   // Handle instant win case
   if (state.c.length <= 10) {
-    newState = {
+    const newState = {
       ...state,
       p: [...state.p, ...state.c],
       c: [],
@@ -593,18 +591,18 @@ function handleNukeUse(state: GameState): GameState {
       playerNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: NUKE_MESSAGES.PLAYER.SUCCESS,
-      color: NUKE_MESSAGES.PLAYER.color,
-      victoryMessage: NUKE_MESSAGES.PLAYER.SUCCESS
+      m: `NUKE COMPLETELY DESTROYED CPU'S FORCES!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
+      color: '#4ADE80',
+      victoryMessage: '🎉 Victory! 🎉'
     };
     verifyCardCount(newState, 'NUKE_INSTANT_WIN');
     return newState;
   }
 
-  // Take 10 cards with nuke - don't draw additional cards
+  // Take 10 cards with nuke - no additional cards drawn
   const nukedCards = state.c.splice(-10);
   
-  newState = {
+  const newState = {
     ...state,
     p: [...state.p, ...nukedCards],
     c: [...state.c],
@@ -614,7 +612,7 @@ function handleNukeUse(state: GameState): GameState {
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
     m: `NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
-    color: NUKE_MESSAGES.PLAYER.color
+    color: '#4ADE80'
   };
   verifyCardCount(newState, 'NUKE_WITH_TURN');
   return newState;
@@ -623,12 +621,14 @@ function handleNukeUse(state: GameState): GameState {
 function handleCpuNuke(state: GameState): GameState {
   console.log('Processing CPU nuke use');
   
-  const nukeCard: Card = { v: 0, s: '☢️', isNuke: true };
-  let newState: GameState;
+  const nukeCard: Card = { 
+    v: 10, 
+    s: '☢️',  // Changed to nuke symbol
+    isNuke: true 
+  };
   
-  // Handle instant win case
   if (state.p.length <= 10) {
-    newState = {
+    const newState = {
       ...state,
       p: [],
       c: [...state.c, ...state.p],
@@ -637,18 +637,17 @@ function handleCpuNuke(state: GameState): GameState {
       cpuNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: NUKE_MESSAGES.CPU.SUCCESS,
-      color: NUKE_MESSAGES.CPU.color,
-      victoryMessage: NUKE_MESSAGES.CPU.SUCCESS
+      m: `CPU NUKE COMPLETELY DESTROYED YOUR FORCES!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
+      color: '#FF4444',
+      victoryMessage: '💔 Defeat! 💔'
     };
     verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
     return newState;
   }
 
-  // Take 10 cards with nuke - don't draw additional cards
   const nukedCards = state.p.splice(-10);
   
-  newState = {
+  const newState = {
     ...state,
     p: [...state.p],
     c: [...state.c, ...nukedCards],
@@ -658,7 +657,7 @@ function handleCpuNuke(state: GameState): GameState {
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
     m: `CPU NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
-    color: NUKE_MESSAGES.CPU.color
+    color: '#FF4444'
   };
   verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
   return newState;
