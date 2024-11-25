@@ -910,7 +910,6 @@ const styles = {
 // Update handleTurn to actually implement the logic instead of throwing
 function handleTurn(state: GameState, useNuke: boolean = false): GameState {
   verifyCardCount(state, 'TURN_START');
-  const moveCount = (state.moveCount || 0) + 1;
   
   if (useNuke) {
     return handleNukeUse(state);
@@ -951,17 +950,26 @@ function handleTurn(state: GameState, useNuke: boolean = false): GameState {
       };
     }
 
-    const pWarCards = state.p.splice(-3).map(c => ({...c, hidden: true}));
-    const cWarCards = state.c.splice(-3).map(c => ({...c, hidden: true}));
+    // Take 3 cards from each deck for war
+    const pWarCards = state.p.splice(-3);
+    const cWarCards = state.c.splice(-3);
+    
+    // Create the war pile with all cards including the tied cards
+    const warPile = [
+      pc, 
+      cc, 
+      ...pWarCards.map(c => ({...c, hidden: true})),
+      ...cWarCards.map(c => ({...c, hidden: true}))
+    ];
 
     return {
       ...state,
       pc,
       cc,
       w: true,
-      warPile: [...pWarCards, ...cWarCards],
+      warPile,  // Include ALL cards in war pile
       m: 'WAR! Three cards face down...',
-      moveCount,
+      moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
       warCount: (state.warCount || 0) + 1
     };
