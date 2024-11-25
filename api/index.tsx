@@ -576,7 +576,7 @@ function handleNukeUse(state: GameState): GameState {
   
   const nukeCard: Card = { 
     v: 10,
-    s: '♦',
+    s: '☢️',
     isNuke: true
   };
   
