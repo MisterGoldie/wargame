@@ -568,6 +568,7 @@ function handleNukeUse(state: GameState): GameState {
   
   let newState: GameState;
   
+  // Handle instant win case
   if (state.c.length <= 10) {
     newState = {
       ...state,
@@ -585,8 +586,10 @@ function handleNukeUse(state: GameState): GameState {
     return newState;
   }
 
+  // Take 10 cards with nuke
   const nukedCards = state.c.splice(-10);
   
+  // Continue with a normal turn after showing nuke
   if (state.p.length > 0 && state.c.length > 0) {
     const pc = state.p.pop()!;
     const cc = state.c.pop()!;
@@ -601,7 +604,7 @@ function handleNukeUse(state: GameState): GameState {
       playerNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: `Nuke stole 10 cards! Then ${winner === 'p' ? 'you' : 'CPU'} won with ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!`
+      m: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
     };
     verifyCardCount(newState, 'NUKE_WITH_TURN');
     return newState;
@@ -615,7 +618,7 @@ function handleNukeUse(state: GameState): GameState {
     playerNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: 'NUKE USED! You captured 10 enemy cards!'
+    m: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
   };
   verifyCardCount(newState, 'NUKE_ONLY');
   return newState;
@@ -953,7 +956,7 @@ app.frame('/game', async (c) => {
     let username = 'Player';
     let fanTokenData = { ownsToken: false, balance: 0 };
 
-    // Handle initial load
+    // Only check API on initial game start
     if (!buttonValue && fid) {
       try {
         const [usernameResult, tokenData] = await Promise.all([
@@ -967,10 +970,14 @@ app.frame('/game', async (c) => {
       }
       state = { ...initializeGame(), username, fanTokenData };
     } 
-    // Handle button actions
+    // Use stored values for subsequent moves
     else if (buttonValue?.startsWith('draw:') || buttonValue?.startsWith('nuke:')) {
       const encodedState = buttonValue.split(':')[1];
       const decodedState = JSON.parse(Buffer.from(encodedState, 'base64').toString());
+      
+      // Use the values stored in state
+      username = decodedState.username || 'Player';
+      fanTokenData = decodedState.fanTokenData || { ownsToken: false, balance: 0 };
       
       if (isOnCooldown(decodedState.lastDrawTime)) {
         return c.res({
@@ -990,13 +997,9 @@ app.frame('/game', async (c) => {
           ]
         });
       }
-
-      username = decodedState.username || 'Player';
-      fanTokenData = decodedState.fanTokenData || { ownsToken: false, balance: 0 };
       
       state = handleTurn(decodedState, buttonValue.startsWith('nuke:'));
-      state.username = username;
-      state.fanTokenData = fanTokenData;
+      verifyCardCount(state, 'POST_TURN');
     } else {
       state = { ...initializeGame(), username, fanTokenData };
     }
