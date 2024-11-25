@@ -601,43 +601,22 @@ function handleNukeUse(state: GameState): GameState {
     return newState;
   }
 
-  // Take 10 cards with nuke
+  // Take 10 cards with nuke - don't draw additional cards
   const nukedCards = state.c.splice(-10);
   
-  // Continue with a normal turn after showing nuke
-  if (state.p.length > 0 && state.c.length > 0) {
-    const pc = state.p.pop()!;
-    const cc = state.c.pop()!;
-    const winner = pc.v > cc.v ? 'p' : 'c';
-    
-    newState = {
-      ...state,
-      p: [...state.p, ...nukedCards, ...(winner === 'p' ? [pc, cc] : [])],
-      c: [...state.c, ...(winner === 'c' ? [pc, cc] : [])],
-      pc: nukeCard,
-      cc,
-      playerNukeAvailable: false,
-      moveCount: (state.moveCount || 0) + 1,
-      lastDrawTime: Date.now(),
-      m: `NUKE STOLE 10 CARDS! THEN YOU WON WITH ${getCardLabel(pc.v)}!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
-      color: '#4ADE80'  // Green for player
-    };
-    verifyCardCount(newState, 'NUKE_WITH_TURN');
-    return newState;
-  }
-
   newState = {
     ...state,
     p: [...state.p, ...nukedCards],
+    c: [...state.c],
     pc: nukeCard,
     cc: null,
     playerNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: NUKE_MESSAGES.PLAYER.SUCCESS,
+    m: `NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
     color: NUKE_MESSAGES.PLAYER.color
   };
-  verifyCardCount(newState, 'NUKE_ONLY');
+  verifyCardCount(newState, 'NUKE_WITH_TURN');
   return newState;
 }
 
@@ -647,32 +626,28 @@ function handleCpuNuke(state: GameState): GameState {
   const nukeCard: Card = { v: 0, s: '☢️', isNuke: true };
   let newState: GameState;
   
-  // Take 10 cards with nuke
-  const nukedCards = state.p.splice(-10);
-  
-  // Continue with a normal turn after nuke
-  if (state.p.length > 0 && state.c.length > 0) {
-    const pc = state.p.pop()!;
-    const cc = state.c.pop()!;
-    const winner = pc.v > cc.v ? 'p' : 'c';
-    
+  // Handle instant win case
+  if (state.p.length <= 10) {
     newState = {
       ...state,
-      p: [...state.p, ...(winner === 'p' ? [pc, cc] : [])],
-      c: [...state.c, ...nukedCards, ...(winner === 'c' ? [pc, cc] : [])],
-      pc,
-      cc: nukeCard,  // Show the nuke card instead of the regular card
+      p: [],
+      c: [...state.c, ...state.p],
+      pc: null,
+      cc: nukeCard,
       cpuNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: `CPU NUKE STOLE 10 CARDS! THEN ${winner === 'p' ? 'YOU' : 'CPU'} WON WITH ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
-      color: NUKE_MESSAGES.CPU.color
+      m: NUKE_MESSAGES.CPU.SUCCESS,
+      color: NUKE_MESSAGES.CPU.color,
+      victoryMessage: NUKE_MESSAGES.CPU.SUCCESS
     };
-    verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
+    verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
     return newState;
   }
 
-  // Just nuke without a turn
+  // Take 10 cards with nuke - don't draw additional cards
+  const nukedCards = state.p.splice(-10);
+  
   newState = {
     ...state,
     p: [...state.p],
@@ -682,10 +657,10 @@ function handleCpuNuke(state: GameState): GameState {
     cpuNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: NUKE_MESSAGES.CPU.SUCCESS,
+    m: `CPU NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
     color: NUKE_MESSAGES.CPU.color
   };
-  verifyCardCount(newState, 'CPU_NUKE_ONLY');
+  verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
   return newState;
 }
 
