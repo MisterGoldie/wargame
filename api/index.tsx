@@ -629,12 +629,7 @@ function handleNukeUse(state: GameState): GameState {
 function handleCpuNuke(state: GameState): GameState {
   console.log('Processing CPU nuke use');
   
-  const nukeCard: Card = { 
-    v: 14,
-    s: '♦',
-    isNuke: true
-  };
-  
+  const nukeCard: Card = { v: 0, s: '☢️', isNuke: true };
   let newState: GameState;
   
   if (state.p.length <= 10) {
@@ -647,28 +642,47 @@ function handleCpuNuke(state: GameState): GameState {
       cpuNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: 'CPU used their NUKE! Your forces were completely destroyed!',
-      victoryMessage: '☢️ NUCLEAR DEFEAT! ☢️'
+      m: 'NUCLEAR VICTORY! CPU\'s nuke completely destroyed your forces!',
+      victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
     };
     verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
     return newState;
   }
 
   const nukedCards = state.p.splice(-10);
-  const capturedCard = nukedCards[nukedCards.length - 1];
+  if (state.p.length > 0 && state.c.length > 0) {
+    const pc = state.p.pop()!;
+    const cc = state.c.pop()!;
+    const winner = pc.v > cc.v ? 'p' : 'c';
+    
+    newState = {
+      ...state,
+      p: [...state.p, ...nukedCards, ...(winner === 'p' ? [pc, cc] : [])],
+      c: [...state.c, ...(winner === 'c' ? [pc, cc] : [])],
+      pc,  // Show regular card after nuke
+      cc,
+      cpuNukeAvailable: false,
+      moveCount: (state.moveCount || 0) + 1,
+      lastDrawTime: Date.now(),
+      m: `CPU Nuke stole 10 cards! Then ${winner === 'p' ? 'you' : 'CPU'} won with ${getCardLabel(winner === 'p' ? pc.v : cc.v)}!`,
+      victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
+    };
+    verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
+    return newState;
+  }
 
   newState = {
     ...state,
-    c: [...state.c, ...nukedCards],
-    pc: capturedCard,
+    p: [...state.p, ...nukedCards],
+    pc: null,
     cc: nukeCard,
     cpuNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: `CPU used their NUKE! They stole 10 of your cards including ${getCardLabel(capturedCard.v)}!`,
-    victoryMessage: '☢️ NUCLEAR STRIKE RECEIVED! ☢️'
+    m: 'CPU Nuke used! You captured 10 enemy cards!',
+    victoryMessage: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️'
   };
-  verifyCardCount(newState, 'CPU_NUKE_STANDARD');
+  verifyCardCount(newState, 'CPU_NUKE_ONLY');
   return newState;
 }
 
@@ -806,98 +820,68 @@ const styles = {
   root: {
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
     width: '1080px',
     height: '1080px',
     backgroundColor: '#1a1a1a',
-    padding: '40px',
-    fontFamily: 'Silkscreen'
+    padding: '40px'
   },
   gamePanel: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '40px',
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    padding: '60px',
-    borderRadius: '20px',
-    width: '90%',
-    maxWidth: '900px',
-    border: '2px solid #333'
+    gap: '20px'
+  },
+  cooldownMessage: {
+    fontSize: '24px',
+    color: '#ff4444',
+    textAlign: 'center'
+  },
+  errorMessage: {
+    fontSize: '24px',
+    color: '#ff4444',
+    textAlign: 'center'
   },
   counter: {
     display: 'flex',
-    width: '100%',
     justifyContent: 'space-between',
-    fontSize: '36px',
-    color: '#ffffff',
-    textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
+    width: '100%',
+    padding: '10px 20px',
+    color: 'white',
+    fontSize: '24px'
+  },
+  fanTokenIndicator: {
+    color: '#4ADE80',
+    fontSize: '20px',
+    marginBottom: '10px'
   },
   cardArea: {
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: '40px',
-    padding: '20px',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: '15px',
-    minHeight: '300px',
-    justifyContent: 'center'
+    gap: '20px',
+    marginBottom: '20px'
   },
   vsText: {
-    fontSize: '48px',
-    fontWeight: 'bold',
-    color: '#ff4444',
-    textShadow: '0 0 10px rgba(255,68,68,0.5)'
+    color: 'white',
+    fontSize: '32px',
+    margin: '0 20px'
   },
   messageArea: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '20px',
-    width: '100%',
-    textAlign: 'center'
+    gap: '20px'
   },
   gameMessage: (isWar: boolean) => ({
-    fontSize: isWar ? '42px' : '36px',
-    color: isWar ? '#ff4444' : '#ffffff',
-    textShadow: isWar ? '0 0 10px rgba(255,68,68,0.5)' : '2px 2px 4px rgba(0,0,0,0.5)',
-    fontWeight: isWar ? 'bold' : 'normal'
+    fontSize: '32px',
+    color: isWar ? '#ff4444' : 'white',
+    textAlign: 'center' as const
   }),
   victoryMessage: {
     fontSize: '48px',
     color: '#4ADE80',
     fontWeight: 'bold',
-    textShadow: '0 0 10px rgba(74,222,128,0.5)',
-    animation: 'pulse 2s infinite'
-  },
-  fanTokenIndicator: {
-    fontSize: '24px',
-    color: '#4ADE80',
-    padding: '10px 20px',
-    backgroundColor: 'rgba(74,222,128,0.1)',
-    borderRadius: '10px',
-    border: '1px solid #4ADE80'
-  },
-  cooldownMessage: {
-    fontSize: '36px',
-    color: '#ff4444',
-    textAlign: 'center',
-    padding: '20px',
-    backgroundColor: 'rgba(255,68,68,0.1)',
-    borderRadius: '10px',
-    border: '1px solid #ff4444'
-  },
-  errorMessage: {
-    fontSize: '32px',
-    color: '#ff4444',
-    textAlign: 'center',
-    padding: '20px',
-    backgroundColor: 'rgba(255,68,68,0.1)',
-    borderRadius: '10px',
-    border: '1px solid #ff4444',
-    maxWidth: '80%'
+    textAlign: 'center' as const
   }
 } as const;
 
