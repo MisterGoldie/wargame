@@ -1041,47 +1041,9 @@ app.frame('/game', async (c) => {
             <div style={styles.cardArea}>
               {state.pc && state.cc ? (
                 <>
-                  <div style={{ 
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '40px'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '10px'
-                    }}>
-                      <span style={{ 
-                        color: '#4ADE80', 
-                        fontSize: '24px',
-                        fontWeight: 'bold',
-                        textShadow: '0 0 10px rgba(74,222,128,0.3)'
-                      }}>
-                        Your Card
-                      </span>
-                      <GameCard card={state.pc} />
-                    </div>
-
-                    <span style={styles.vsText}>VS</span>
-
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '10px'
-                    }}>
-                      <span style={{ 
-                        color: '#ff4444', 
-                        fontSize: '24px',
-                        fontWeight: 'bold',
-                        textShadow: '0 0 10px rgba(255,68,68,0.3)'
-                      }}>
-                        CPU's Card
-                      </span>
-                      <GameCard card={state.cc} />
-                    </div>
-                  </div>
+                  <GameCard card={state.pc} />
+                  <span style={styles.vsText}>VS</span>
+                  <GameCard card={state.cc} />
                 </>
               ) : (
                 <span style={{ fontSize: '24px', color: 'white' }}>
