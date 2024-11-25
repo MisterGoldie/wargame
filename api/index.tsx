@@ -798,6 +798,25 @@ function GameCard({ card }: { card: Card }) {
     );
   }
   
+  // Special styling for nuke cards
+  if (card.isNuke) {
+    return (
+      <div style={{
+        ...CardStyle,
+        backgroundColor: '#ff0000',  // Red background
+        color: '#000000',           // Black text
+        border: '2px solid #000000' // Black border for extra emphasis
+      }}>
+        <span style={{ fontSize: '24px' }}>NUKE</span>
+        <span style={{ fontSize: '48px' }}>{card.s}</span>
+        <span style={{ fontSize: '24px', transform: 'rotate(180deg)' }}>
+          NUKE
+        </span>
+      </div>
+    );
+  }
+  
+  // Regular card styling
   return (
     <div style={{
       ...CardStyle,
