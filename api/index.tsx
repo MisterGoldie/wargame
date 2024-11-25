@@ -619,8 +619,8 @@ function handleNukeUse(state: GameState): GameState {
       playerNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: NUKE_MESSAGES.PLAYER.SUCCESS,
-      color: NUKE_MESSAGES.PLAYER.color
+      m: `NUKE STOLE 10 CARDS! THEN YOU WON WITH ${getCardLabel(pc.v)}!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
+      color: '#4ADE80'  // Green for player
     };
     verifyCardCount(newState, 'NUKE_WITH_TURN');
     return newState;
