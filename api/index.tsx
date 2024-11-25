@@ -569,13 +569,15 @@ function handleNukeUse(state: GameState): GameState {
   
   const nukeCard: Card = { 
     v: 10,
-    s: '☢️',
+    s: '♦',
     isNuke: true
   };
   
+  let newState: GameState;
+  
   // Handle instant win case
   if (state.c.length <= 10) {
-    const newState = {
+    newState = {
       ...state,
       p: [...state.p, ...state.c],
       c: [],
@@ -584,8 +586,8 @@ function handleNukeUse(state: GameState): GameState {
       playerNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: 'NUCLEAR VICTORY! Your nuke completely destroyed CPU\'s forces!',
-      victoryMessage: '☢️ NUCLEAR VICTORY! ☢️'
+      m: NUKE_MESSAGES.INSTANT_WIN,
+      victoryMessage: NUKE_MESSAGES.INSTANT_WIN
     };
     verifyCardCount(newState, 'NUKE_INSTANT_WIN');
     return newState;
@@ -594,8 +596,28 @@ function handleNukeUse(state: GameState): GameState {
   // Take 10 cards with nuke
   const nukedCards = state.c.splice(-10);
   
-  // Show ONLY the m message, no victoryMessage
-  const newState = {
+  // Continue with a normal turn after showing nuke
+  if (state.p.length > 0 && state.c.length > 0) {
+    const pc = state.p.pop()!;
+    const cc = state.c.pop()!;
+    const winner = pc.v > cc.v ? 'p' : 'c';
+    
+    newState = {
+      ...state,
+      p: [...state.p, ...nukedCards, ...(winner === 'p' ? [pc, cc] : [])],
+      c: [...state.c, ...(winner === 'c' ? [pc, cc] : [])],
+      pc: nukeCard,
+      cc,
+      playerNukeAvailable: false,
+      moveCount: (state.moveCount || 0) + 1,
+      lastDrawTime: Date.now(),
+      m: NUKE_MESSAGES.REGULAR_USE
+    };
+    verifyCardCount(newState, 'NUKE_WITH_TURN');
+    return newState;
+  }
+
+  newState = {
     ...state,
     p: [...state.p, ...nukedCards],
     pc: nukeCard,
@@ -603,8 +625,7 @@ function handleNukeUse(state: GameState): GameState {
     playerNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️',
-    victoryMessage: undefined  // Explicitly clear any victory message
+    m: NUKE_MESSAGES.REGULAR_USE
   };
   verifyCardCount(newState, 'NUKE_ONLY');
   return newState;
@@ -755,27 +776,46 @@ const CardStyle = {
 } as const;
 
 function GameCard({ card }: { card: Card }) {
+  if (card.hidden) {
+    return (
+      <div style={{
+        ...CardStyle,
+        backgroundColor: '#6B7280',
+        color: 'white'
+      }}>
+        <span style={{ fontSize: '24px' }}>🂠</span>
+      </div>
+    );
+  }
+  
   if (card.isNuke) {
     return (
       <div style={{
         ...CardStyle,
-        backgroundColor: '#ff4444',
-        border: '2px solid #ffff00',
+        backgroundColor: '#FF4444',
         color: 'white',
-        fontSize: '48px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        border: '2px solid #FF0000'
       }}>
-        ☢️
+        <span style={{ fontSize: '24px' }}>NUKE</span>
+        <span style={{ fontSize: '48px' }}>☢️</span>
+        <span style={{ fontSize: '24px', transform: 'rotate(180deg)' }}>
+          NUKE
+        </span>
       </div>
     );
   }
   
   return (
-    <div style={CardStyle}>
-      {getCardLabel(card.v)}
-      {card.s}
+    <div style={{
+      ...CardStyle,
+      backgroundColor: 'white',
+      color: card.s === '♥' || card.s === '♦' ? '#ff0000' : '#000000'
+    }}>
+      <span style={{ fontSize: '24px' }}>{getCardLabel(card.v)}</span>
+      <span style={{ fontSize: '48px' }}>{card.s}</span>
+      <span style={{ fontSize: '24px', transform: 'rotate(180deg)' }}>
+        {getCardLabel(card.v)}
+      </span>
     </div>
   );
 }
