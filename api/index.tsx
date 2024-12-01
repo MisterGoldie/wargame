@@ -839,8 +839,12 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '40px',
-    margin: '40px 0'
+    gap: '40px'
+  },
+  cardLabel: {
+    color: 'white',
+    fontSize: '24px',
+    marginBottom: '8px'
   },
   startText: {
     fontSize: '32px',
@@ -880,6 +884,31 @@ const styles = {
     padding: '24px',
     backgroundColor: 'rgba(74, 222, 128, 0.1)',
     borderRadius: '15px'
+  },
+  cardContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: '12px',
+    padding: '16px',
+    width: '128px',
+    height: '176px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+  },
+  cardValue: {
+    fontSize: '36px',
+    fontWeight: 'bold'
+  },
+  cardSuit: {
+    fontSize: '48px'
   }
 } as const;
 
@@ -1055,9 +1084,45 @@ app.frame('/game', async (c) => {
             <div style={styles.cardArea}>
               {(state.pc || state.cc) ? (
                 <>
-                  {state.pc && <GameCard card={state.pc} />}
+                  <div style={styles.cardContainer}>
+                    <div style={styles.cardLabel}>PLAYER</div>
+                    {state.pc && (
+                      <div style={styles.card}>
+                        <div style={{
+                          ...styles.cardValue,
+                          color: state.pc.s === '♦' || state.pc.s === '♥' ? '#DC2626' : '#111827'
+                        }}>
+                          {state.pc.v}
+                        </div>
+                        <div style={{
+                          ...styles.cardSuit,
+                          color: state.pc.s === '♦' || state.pc.s === '♥' ? '#DC2626' : '#111827'
+                        }}>
+                          {state.pc.s}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {state.pc && state.cc && <span style={styles.vsText}>VS</span>}
-                  {state.cc && <GameCard card={state.cc} />}
+                  <div style={styles.cardContainer}>
+                    <div style={styles.cardLabel}>CPU</div>
+                    {state.cc && (
+                      <div style={styles.card}>
+                        <div style={{
+                          ...styles.cardValue,
+                          color: state.cc.s === '♦' || state.cc.s === '♥' ? '#DC2626' : '#111827'
+                        }}>
+                          {state.cc.v}
+                        </div>
+                        <div style={{
+                          ...styles.cardSuit,
+                          color: state.cc.s === '♦' || state.cc.s === '♥' ? '#DC2626' : '#111827'
+                        }}>
+                          {state.cc.s}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </>
               ) : (
                 <span style={styles.startText}>
