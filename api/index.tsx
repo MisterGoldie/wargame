@@ -799,7 +799,7 @@ function GameCard({ card }: { card: Card }) {
   );
 }
 
-// Update the styles object (replaces lines 803-873)
+// Update styles object with cardLabel
 const styles = {
   root: {
     display: 'flex',
@@ -813,7 +813,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    height: '100%'
+    gap: '32px'
   },
   counter: {
     display: 'flex',
@@ -842,32 +842,19 @@ const styles = {
     gap: '40px',
     marginTop: '200px'
   },
-  cardColumn: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '16px'
+  startText: {
+    fontSize: '32px',
+    color: 'white'
   },
   cardLabel: {
     color: 'white',
     fontSize: '24px',
-    fontWeight: 'bold'
-  },
-  startText: {
-    fontSize: '32px',
-    color: 'white'
+    marginBottom: '8px'
   },
   vsText: {
     color: 'white',
     fontSize: '48px',
     fontWeight: 'bold'
-  },
-  warArea: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '20px',
-    marginTop: '20px'
   },
   messageArea: {
     display: 'flex',
@@ -1067,19 +1054,15 @@ app.frame('/game', async (c) => {
             <div style={styles.cardArea}>
               {(state.pc || state.cc) ? (
                 <>
-                  {state.pc && (
-                    <div style={styles.cardColumn}>
-                      <span style={styles.cardLabel}>PLAYER</span>
-                      <GameCard card={state.pc} />
-                    </div>
-                  )}
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={styles.cardLabel}>PLAYER</div>
+                    {state.pc && <GameCard card={state.pc} />}
+                  </div>
                   {state.pc && state.cc && <span style={styles.vsText}>VS</span>}
-                  {state.cc && (
-                    <div style={styles.cardColumn}>
-                      <span style={styles.cardLabel}>CPU</span>
-                      <GameCard card={state.cc} />
-                    </div>
-                  )}
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={styles.cardLabel}>CPU</div>
+                    {state.cc && <GameCard card={state.cc} />}
+                  </div>
                 </>
               ) : (
                 <span style={styles.startText}>
@@ -1087,14 +1070,6 @@ app.frame('/game', async (c) => {
                 </span>
               )}
             </div>
-
-            {state.w && state.warPile && (
-              <div style={styles.warArea}>
-                {state.warPile.map((card, index) => (
-                  <GameCard key={index} card={card} />
-                ))}
-              </div>
-            )}
 
             <div style={styles.messageArea}>
               <span style={{
