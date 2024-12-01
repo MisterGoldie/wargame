@@ -176,7 +176,7 @@ function getCardLabel(value: number): string {
 function initializeGame(): GameState {
   const deck: Card[] = [];
   
-  // Add standard cards (converting string values to numbers)
+  // Add standard cards (converting string values to numberss)
   const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]; // Ace=1, Jack=11, Queen=12, King=13
   const suits = ['♠', '♣', '♥', '♦'];
   
