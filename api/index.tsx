@@ -880,11 +880,6 @@ const styles = {
     padding: '24px',
     backgroundColor: 'rgba(74, 222, 128, 0.1)',
     borderRadius: '15px'
-  },
-  cardLabel: {
-    color: 'white',
-    fontSize: '24px',
-    marginBottom: '8px'
   }
 } as const;
 
@@ -1060,15 +1055,9 @@ app.frame('/game', async (c) => {
             <div style={styles.cardArea}>
               {(state.pc || state.cc) ? (
                 <>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={styles.cardLabel}>PLAYER</div>
-                    {state.pc && <GameCard card={state.pc} />}
-                  </div>
+                  {state.pc && <GameCard card={state.pc} />}
                   {state.pc && state.cc && <span style={styles.vsText}>VS</span>}
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={styles.cardLabel}>CPU</div>
-                    {state.cc && <GameCard card={state.cc} />}
-                  </div>
+                  {state.cc && <GameCard card={state.cc} />}
                 </>
               ) : (
                 <span style={styles.startText}>
