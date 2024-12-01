@@ -555,7 +555,7 @@ const NUKE_MESSAGES = {
     color: '#4ADE80'  // Green
   },
   CPU: {
-    SUCCESS: '☢️ NUCLEAR STRIKE SUCCESSFUL! ��️',
+    SUCCESS: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️',
     color: '#FF4444'  // Red
   }
 };
@@ -580,28 +580,26 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleNukeUse(state: GameState): GameState {
-  console.log('Processing player nuke use');
-  
-  // Create a copy of the state to work with
+  // Create a working copy of state
   let workingState = { ...state };
   
-  // Return any cards in play to their original decks before nuking
-  if (workingState.pc) {
-    workingState.p = [...workingState.p, workingState.pc];
-    workingState.pc = null;
-  }
-  if (workingState.cc) {
-    workingState.c = [...workingState.c, workingState.cc];
-    workingState.cc = null;
+  // Find and remove a nuke card from player's deck
+  const nukeIndex = workingState.p.findIndex(card => card.isNuke);
+  if (nukeIndex === -1) {
+    throw new Error('No nuke card found in player deck');
   }
   
+  // Remove the nuke card from player's deck
+  workingState.p.splice(nukeIndex, 1);
+  const nukeCard = { v: -1, s: '☢️', isNuke: true };
+
   // Handle instant win case
   if (workingState.c.length <= 10) {
     const newState = {
       ...workingState,
       p: [...workingState.p, ...workingState.c],
       c: [],
-      pc: { v: -1, s: '☢️', isNuke: true },
+      pc: nukeCard,
       cc: null,
       playerNukeAvailable: false,
       moveCount: (workingState.moveCount || 0) + 1,
@@ -614,14 +612,14 @@ function handleNukeUse(state: GameState): GameState {
     return newState;
   }
 
-  // Take 10 cards with nuke
+  // Take 10 cards from CPU
   const nukedCards = workingState.c.splice(-10);
   
   const newState = {
     ...workingState,
-    p: [...workingState.p, ...nukedCards],
+    p: [...workingState.p, ...nukedCards], // Don't add nuke back to deck
     c: [...workingState.c],
-    pc: { v: -1, s: '☢️', isNuke: true },
+    pc: nukeCard,  // Show the nuke card in play
     cc: null,
     playerNukeAvailable: false,
     moveCount: (workingState.moveCount || 0) + 1,
@@ -635,21 +633,19 @@ function handleNukeUse(state: GameState): GameState {
 }
 
 function handleCpuNuke(state: GameState): GameState {
-  console.log('Processing CPU nuke use');
-  
-  // Create a copy of the state to work with
+  // Create a working copy of state
   let workingState = { ...state };
   
-  // Return any cards in play to their original decks before nuking
-  if (workingState.pc) {
-    workingState.p = [...workingState.p, workingState.pc];
-    workingState.pc = null;
-  }
-  if (workingState.cc) {
-    workingState.c = [...workingState.c, workingState.cc];
-    workingState.cc = null;
+  // Find and remove a nuke card from CPU's deck
+  const nukeIndex = workingState.c.findIndex(card => card.isNuke);
+  if (nukeIndex === -1) {
+    throw new Error('No nuke card found in CPU deck');
   }
   
+  // Remove the nuke card from CPU's deck
+  workingState.c.splice(nukeIndex, 1);
+  const nukeCard = { v: -1, s: '☢️', isNuke: true };
+
   // Handle instant win case
   if (workingState.p.length <= 10) {
     const newState = {
@@ -657,7 +653,7 @@ function handleCpuNuke(state: GameState): GameState {
       c: [...workingState.c, ...workingState.p],
       p: [],
       pc: null,
-      cc: { v: -1, s: '☢️', isNuke: true },
+      cc: nukeCard,
       cpuNukeAvailable: false,
       moveCount: (workingState.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
@@ -669,15 +665,15 @@ function handleCpuNuke(state: GameState): GameState {
     return newState;
   }
 
-  // Take 10 cards with nuke
+  // Take 10 cards from player
   const nukedCards = workingState.p.splice(-10);
   
   const newState = {
     ...workingState,
-    c: [...workingState.c, ...nukedCards],
+    c: [...workingState.c, ...nukedCards], // Don't add nuke back to deck
     p: [...workingState.p],
     pc: null,
-    cc: { v: -1, s: '☢️', isNuke: true },
+    cc: nukeCard,  // Show the nuke card in play
     cpuNukeAvailable: false,
     moveCount: (workingState.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
