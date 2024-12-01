@@ -173,38 +173,43 @@ function getCardLabel(value: number): string {
   return specialCards[value] || value.toString();
 }
 
-function createRegularDeck(): Card[] {
-  const suits = ['♠', '♣', '♥', '♦'];
-  const values = Array.from({ length: 13 }, (_, i) => i + 1);
-  return suits.flatMap(s => values.map(v => ({ v, s })));
-}
-
-function shuffle<T>(array: T[]): T[] {
-  const newArray = [...array];
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j]!, newArray[i]!];
-  }
-  return newArray;
-}
-
 function initializeGame(): GameState {
-  const deck = shuffle(createRegularDeck());
-  const midpoint = Math.floor(deck.length / 2);
+  const deck: Card[] = [];
+  
+  // Add standard cards (converting string values to numbers)
+  const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]; // Ace=1, Jack=11, Queen=12, King=13
+  const suits = ['♠', '♣', '♥', '♦'];
+  
+  for (const s of suits) {
+    for (const v of values) {
+      deck.push({ v, s });
+    }
+  }
+  
+  // Add nuke cards (using special number value for nukes)
+  deck.push({ v: -1, s: '★', isNuke: true });
+  deck.push({ v: -1, s: '★', isNuke: true });
+  
+  // Shuffle deck
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  
+  // Split deck
+  const playerDeck = deck.slice(0, deck.length / 2);
+  const cpuDeck = deck.slice(deck.length / 2);
   
   return {
-    p: deck.slice(0, midpoint),
-    c: deck.slice(midpoint),
+    p: playerDeck,
+    c: cpuDeck,
     pc: null,
     cc: null,
     m: 'Welcome to War! Draw a card to begin. You have one nuke ability!',
     w: false,
-    lastDrawTime: Date.now(),
     playerNukeAvailable: true,
     cpuNukeAvailable: true,
     moveCount: 0,
-    warCount: 0,
-    color: undefined,
     colorResetPending: false
   };
 }
