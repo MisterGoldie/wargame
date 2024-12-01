@@ -740,17 +740,18 @@ app.frame('/', (c) => {
   });
 });
 
-// Card component
+// Card component with updated styling
 const CardStyle = {
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'space-between',
   backgroundColor: 'white',
-  width: '120px',
-  height: '180px',
+  width: '160px',
+  height: '240px',
   borderRadius: '10px',
   padding: '20px',
+  margin: '0 10px'
 } as const;
 
 function GameCard({ card }: { card: Card }) {
@@ -761,7 +762,7 @@ function GameCard({ card }: { card: Card }) {
         backgroundColor: '#6B7280',
         color: 'white'
       }}>
-        <span style={{ fontSize: '24px' }}>🂠</span>
+        <span style={{ fontSize: '36px' }}>🂠</span>
       </div>
     );
   }
@@ -798,7 +799,7 @@ function GameCard({ card }: { card: Card }) {
   );
 }
 
-// Update styles object with new UI elements
+// Update the styles object (replaces lines 803-873)
 const styles = {
   root: {
     display: 'flex',
@@ -812,59 +813,73 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '20px'
-  },
-  cooldownMessage: {
-    fontSize: '24px',
-    color: '#ff4444',
-    textAlign: 'center'
-  },
-  errorMessage: {
-    fontSize: '24px',
-    color: '#ff4444',
-    textAlign: 'center'
+    gap: '32px'
   },
   counter: {
     display: 'flex',
     justifyContent: 'space-between',
     width: '100%',
-    padding: '10px 20px',
-    color: 'white',
-    fontSize: '24px'
+    padding: '20px 40px',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: '15px'
   },
-  fanTokenIndicator: {
+  counterText: {
+    color: 'white',
+    fontSize: '32px',
+    fontWeight: 'bold'
+  },
+  tokenIndicator: {
+    backgroundColor: 'rgba(74, 222, 128, 0.1)',
+    padding: '10px 20px',
+    borderRadius: '10px',
     color: '#4ADE80',
-    fontSize: '20px',
-    marginBottom: '10px'
+    fontSize: '24px'
   },
   cardArea: {
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
-    gap: '20px',
-    marginBottom: '20px'
+    justifyContent: 'center',
+    gap: '40px',
+    margin: '40px 0'
+  },
+  startText: {
+    fontSize: '32px',
+    color: 'white'
   },
   vsText: {
     color: 'white',
-    fontSize: '32px',
-    margin: '0 20px'
+    fontSize: '48px',
+    fontWeight: 'bold'
+  },
+  warArea: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '20px',
+    marginTop: '20px'
   },
   messageArea: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '20px'
+    gap: '24px'
   },
-  gameMessage: (isWar: boolean) => ({
-    fontSize: '32px',
-    color: isWar ? '#ff4444' : 'white',
-    textAlign: 'center' as const
-  }),
+  gameMessage: {
+    fontSize: '36px',
+    textAlign: 'center',
+    padding: '16px',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: '10px',
+    maxWidth: '800px'
+  },
   victoryMessage: {
     fontSize: '48px',
     color: '#4ADE80',
     fontWeight: 'bold',
-    textAlign: 'center' as const
+    textAlign: 'center',
+    padding: '24px',
+    backgroundColor: 'rgba(74, 222, 128, 0.1)',
+    borderRadius: '15px'
   }
 } as const;
 
@@ -984,7 +999,7 @@ app.frame('/game', async (c) => {
           image: (
             <div style={styles.root}>
               <div style={styles.gamePanel}>
-                <span style={styles.cooldownMessage}>
+                <span style={styles.victoryMessage}>
                   Please wait a moment...
                 </span>
               </div>
@@ -1027,13 +1042,13 @@ app.frame('/game', async (c) => {
         <div style={styles.root}>
           <div style={styles.gamePanel}>
             <div style={styles.counter}>
-              <span>{username}'s Cards: {state.p.length}</span>
-              <span>CPU Cards: {state.c.length}</span>
+              <span style={styles.counterText}>{username}'s Cards: {state.p.length}</span>
+              <span style={styles.counterText}>CPU Cards: {state.c.length}</span>
             </div>
 
             {fanTokenData.ownsToken && (
-              <span style={styles.fanTokenIndicator}>
-                POD Fan Token Holder: {(fanTokenData.balance).toFixed(2)}
+              <span style={styles.tokenIndicator}>
+                POD Fan Token Holder: {fanTokenData.balance.toFixed(2)}
               </span>
             )}
 
@@ -1045,24 +1060,24 @@ app.frame('/game', async (c) => {
                   {state.cc && <GameCard card={state.cc} />}
                 </>
               ) : (
-                <span style={{ fontSize: '24px', color: 'white' }}>
+                <span style={styles.startText}>
                   Draw a card to begin!
                 </span>
               )}
-              
-              {state.w && state.warPile && (
-                <div style={{ marginTop: '20px' }}>
-                  {state.warPile.map((card, index) => (
-                    <GameCard key={index} card={card} />
-                  ))}
-                </div>
-              )}
             </div>
+
+            {state.w && state.warPile && (
+              <div style={styles.warArea}>
+                {state.warPile.map((card, index) => (
+                  <GameCard key={index} card={card} />
+                ))}
+              </div>
+            )}
 
             <div style={styles.messageArea}>
               <span style={{
-                ...styles.gameMessage(state.w),
-                color: state.color || 'white'  // Default to white if no special color
+                ...styles.gameMessage,
+                color: state.color || 'white'
               }}>
                 {state.m}
               </span>
@@ -1092,7 +1107,7 @@ app.frame('/game', async (c) => {
     return c.res({
       image: (
         <div style={styles.root}>
-          <span style={styles.errorMessage}>
+          <span style={{ color: 'white', fontSize: '24px' }}>
             Temporary server hiccup! Please try again.
           </span>
         </div>
