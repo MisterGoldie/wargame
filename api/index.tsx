@@ -555,7 +555,7 @@ const NUKE_MESSAGES = {
     color: '#4ADE80'  // Green
   },
   CPU: {
-    SUCCESS: '☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️',
+    SUCCESS: '☢️ NUCLEAR STRIKE SUCCESSFUL! ��️',
     color: '#FF4444'  // Red
   }
 };
@@ -582,16 +582,29 @@ app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleNukeUse(state: GameState): GameState {
   console.log('Processing player nuke use');
   
+  // Create a copy of the state to work with
+  let workingState = { ...state };
+  
+  // Return any cards in play to their original decks before nuking
+  if (workingState.pc) {
+    workingState.p = [...workingState.p, workingState.pc];
+    workingState.pc = null;
+  }
+  if (workingState.cc) {
+    workingState.c = [...workingState.c, workingState.cc];
+    workingState.cc = null;
+  }
+  
   // Handle instant win case
-  if (state.c.length <= 10) {
+  if (workingState.c.length <= 10) {
     const newState = {
-      ...state,
-      p: [...state.p, ...state.c],
+      ...workingState,
+      p: [...workingState.p, ...workingState.c],
       c: [],
       pc: { v: -1, s: '☢️', isNuke: true },
       cc: null,
       playerNukeAvailable: false,
-      moveCount: (state.moveCount || 0) + 1,
+      moveCount: (workingState.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
       m: `NUKE COMPLETELY DESTROYED CPU'S FORCES!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
       color: '#4ADE80',
@@ -602,70 +615,76 @@ function handleNukeUse(state: GameState): GameState {
   }
 
   // Take 10 cards with nuke
-  const nukedCards = state.c.splice(-10);
-  const playerCard = { v: -1, s: '☢️', isNuke: true };
+  const nukedCards = workingState.c.splice(-10);
   
   const newState = {
-    ...state,
-    p: [...state.p, ...nukedCards],
-    pc: playerCard,
+    ...workingState,
+    p: [...workingState.p, ...nukedCards],
+    c: [...workingState.c],
+    pc: { v: -1, s: '☢️', isNuke: true },
     cc: null,
     playerNukeAvailable: false,
-    moveCount: (state.moveCount || 0) + 1,
+    moveCount: (workingState.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
     m: `NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
     color: '#4ADE80'
   };
   
-  verifyCardCount(newState, 'PLAYER_NUKE_NORMAL');
+  verifyCardCount(newState, 'PLAYER_NUKE_WITH_TURN');
   return newState;
 }
 
 function handleCpuNuke(state: GameState): GameState {
   console.log('Processing CPU nuke use');
   
-  const nukeCard: Card = { 
-    v: 10,
-    s: '☢️',
-    isNuke: true
-  };
-
+  // Create a copy of the state to work with
+  let workingState = { ...state };
+  
+  // Return any cards in play to their original decks before nuking
+  if (workingState.pc) {
+    workingState.p = [...workingState.p, workingState.pc];
+    workingState.pc = null;
+  }
+  if (workingState.cc) {
+    workingState.c = [...workingState.c, workingState.cc];
+    workingState.cc = null;
+  }
+  
   // Handle instant win case
-  if (state.p.length <= 10) {
+  if (workingState.p.length <= 10) {
     const newState = {
-      ...state,
+      ...workingState,
+      c: [...workingState.c, ...workingState.p],
       p: [],
-      c: [...state.c, ...state.p],
       pc: null,
-      cc: nukeCard,
+      cc: { v: -1, s: '☢️', isNuke: true },
       cpuNukeAvailable: false,
-      moveCount: (state.moveCount || 0) + 1,
+      moveCount: (workingState.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: `CPU NUKE COMPLETELY DESTROYED YOUR FORCES!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
-      color: '#FF4444',
-      victoryMessage: '💔 Defeat! 💔',
-      colorResetPending: true
+      m: `CPU LAUNCHED A DEVASTATING NUKE!\n☢️ YOUR FORCES WERE COMPLETELY DESTROYED! ☢️`,
+      color: '#DC2626',
+      victoryMessage: '💀 Game Over 💀'
     };
     verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
     return newState;
   }
 
-  const playerCards = [...state.p];
-  const nukedCards = playerCards.splice(-10);
+  // Take 10 cards with nuke
+  const nukedCards = workingState.p.splice(-10);
   
   const newState = {
-    ...state,
-    p: playerCards,
-    c: [...state.c, ...nukedCards],
+    ...workingState,
+    c: [...workingState.c, ...nukedCards],
+    p: [...workingState.p],
     pc: null,
-    cc: nukeCard,
+    cc: { v: -1, s: '☢️', isNuke: true },
     cpuNukeAvailable: false,
-    moveCount: (state.moveCount || 0) + 1,
+    moveCount: (workingState.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: `CPU NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
-    color: '#FF4444',
-    colorResetPending: true
+    m: `CPU LAUNCHED A DEVASTATING NUKE!\n☢️ YOU LOST 10 CARDS! ☢️`,
+    color: '#DC2626'
   };
+  
   verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
   return newState;
 }
