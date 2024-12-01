@@ -799,7 +799,7 @@ function GameCard({ card }: { card: Card }) {
   );
 }
 
-// Update the styles object with adjusted vertical spacing
+// Update the styles object (replaces lines 803-873)
 const styles = {
   root: {
     display: 'flex',
@@ -813,7 +813,6 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'space-between',
     height: '100%'
   },
   counter: {
@@ -841,7 +840,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '40px',
-    marginTop: '-60px'
+    marginTop: '200px'  // Push cards down further
   },
   startText: {
     fontSize: '32px',
