@@ -176,12 +176,9 @@ function getCardLabel(value: number): string {
 function initializeGame(): GameState {
   const deck: Card[] = [];
   
-  // Add standard cards (converting string values to numberss)
-  const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]; // Ace=1, Jack=11, Queen=12, King=13
+  // Add standard cards (converting string values to numbers)
+  const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
   const suits = ['♠', '♣', '♥', '♦'];
-  
-  // Debug log
-  console.log('Initializing game...');
   
   // Create standard deck
   for (const s of suits) {
@@ -190,27 +187,19 @@ function initializeGame(): GameState {
     }
   }
   
-  console.log('Standard deck size:', deck.length); // Should be 52
+  // Add nuke cards with consistent format
+  deck.push({ v: -1, s: '☢️', isNuke: true });
+  deck.push({ v: -1, s: '☢️', isNuke: true });
   
-  // Add exactly two nuke cards
-  deck.push({ v: -1, s: '★', isNuke: true });
-  deck.push({ v: -1, s: '★', isNuke: true });
-  
-  console.log('Total deck size after nukes:', deck.length); // Should be 54
-  
-  // Shuffle deck
+  // Shuffle and split deck
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
   
-  // Split deck evenly
   const midPoint = Math.floor(deck.length / 2);
   const playerDeck = deck.slice(0, midPoint);
   const cpuDeck = deck.slice(midPoint);
-  
-  console.log('Player deck size:', playerDeck.length);
-  console.log('CPU deck size:', cpuDeck.length);
   
   return {
     p: playerDeck,
@@ -593,19 +582,13 @@ app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleNukeUse(state: GameState): GameState {
   console.log('Processing player nuke use');
   
-  const nukeCard: Card = { 
-    v: 10,
-    s: '☢️',
-    isNuke: true
-  };
-
   // Handle instant win case
   if (state.c.length <= 10) {
     const newState = {
       ...state,
       p: [...state.p, ...state.c],
       c: [],
-      pc: nukeCard,
+      pc: { v: -1, s: '☢️', isNuke: true },
       cc: null,
       playerNukeAvailable: false,
       moveCount: (state.moveCount || 0) + 1,
@@ -620,12 +603,12 @@ function handleNukeUse(state: GameState): GameState {
 
   // Take 10 cards with nuke
   const nukedCards = state.c.splice(-10);
+  const playerCard = { v: -1, s: '☢️', isNuke: true };
   
   const newState = {
     ...state,
     p: [...state.p, ...nukedCards],
-    c: [...state.c],
-    pc: nukeCard,
+    pc: playerCard,
     cc: null,
     playerNukeAvailable: false,
     moveCount: (state.moveCount || 0) + 1,
@@ -633,7 +616,8 @@ function handleNukeUse(state: GameState): GameState {
     m: `NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
     color: '#4ADE80'
   };
-  verifyCardCount(newState, 'PLAYER_NUKE_WITH_TURN');
+  
+  verifyCardCount(newState, 'PLAYER_NUKE_NORMAL');
   return newState;
 }
 
