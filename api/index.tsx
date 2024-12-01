@@ -180,15 +180,23 @@ function initializeGame(): GameState {
   const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]; // Ace=1, Jack=11, Queen=12, King=13
   const suits = ['♠', '♣', '♥', '♦'];
   
+  // Debug log
+  console.log('Initializing game...');
+  
+  // Create standard deck
   for (const s of suits) {
     for (const v of values) {
       deck.push({ v, s });
     }
   }
   
-  // Add nuke cards (using special number value for nukes)
+  console.log('Standard deck size:', deck.length); // Should be 52
+  
+  // Add exactly two nuke cards
   deck.push({ v: -1, s: '★', isNuke: true });
   deck.push({ v: -1, s: '★', isNuke: true });
+  
+  console.log('Total deck size after nukes:', deck.length); // Should be 54
   
   // Shuffle deck
   for (let i = deck.length - 1; i > 0; i--) {
@@ -196,9 +204,13 @@ function initializeGame(): GameState {
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
   
-  // Split deck
-  const playerDeck = deck.slice(0, deck.length / 2);
-  const cpuDeck = deck.slice(deck.length / 2);
+  // Split deck evenly
+  const midPoint = Math.floor(deck.length / 2);
+  const playerDeck = deck.slice(0, midPoint);
+  const cpuDeck = deck.slice(midPoint);
+  
+  console.log('Player deck size:', playerDeck.length);
+  console.log('CPU deck size:', cpuDeck.length);
   
   return {
     p: playerDeck,
