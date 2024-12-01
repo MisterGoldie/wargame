@@ -840,7 +840,18 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '40px',
-    marginTop: '200px'  // Push cards down further
+    marginTop: '200px'
+  },
+  cardColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '16px'
+  },
+  cardLabel: {
+    color: 'white',
+    fontSize: '24px',
+    fontWeight: 'bold'
   },
   startText: {
     fontSize: '32px',
@@ -1056,9 +1067,19 @@ app.frame('/game', async (c) => {
             <div style={styles.cardArea}>
               {(state.pc || state.cc) ? (
                 <>
-                  {state.pc && <GameCard card={state.pc} />}
+                  {state.pc && (
+                    <div style={styles.cardColumn}>
+                      <span style={styles.cardLabel}>PLAYER</span>
+                      <GameCard card={state.pc} />
+                    </div>
+                  )}
                   {state.pc && state.cc && <span style={styles.vsText}>VS</span>}
-                  {state.cc && <GameCard card={state.cc} />}
+                  {state.cc && (
+                    <div style={styles.cardColumn}>
+                      <span style={styles.cardLabel}>CPU</span>
+                      <GameCard card={state.cc} />
+                    </div>
+                  )}
                 </>
               ) : (
                 <span style={styles.startText}>
