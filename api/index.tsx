@@ -173,44 +173,38 @@ function getCardLabel(value: number): string {
   return specialCards[value] || value.toString();
 }
 
-function initializeGame(): GameState {
-  const deck: Card[] = [];
-  
-  // Add standard cards (converting string values to numbers)
-  const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+function createRegularDeck(): Card[] {
   const suits = ['♠', '♣', '♥', '♦'];
-  
-  // Create standard deck
-  for (const s of suits) {
-    for (const v of values) {
-      deck.push({ v, s });
-    }
-  }
-  
-  // Add nuke cards with consistent format
-  deck.push({ v: -1, s: '☢️', isNuke: true });
-  deck.push({ v: -1, s: '☢️', isNuke: true });
-  
-  // Shuffle and split deck
-  for (let i = deck.length - 1; i > 0; i--) {
+  const values = Array.from({ length: 13 }, (_, i) => i + 1);
+  return suits.flatMap(s => values.map(v => ({ v, s })));
+}
+
+function shuffle<T>(array: T[]): T[] {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
+    [newArray[i], newArray[j]] = [newArray[j]!, newArray[i]!];
   }
-  
-  const midPoint = Math.floor(deck.length / 2);
-  const playerDeck = deck.slice(0, midPoint);
-  const cpuDeck = deck.slice(midPoint);
+  return newArray;
+}
+
+function initializeGame(): GameState {
+  const deck = shuffle(createRegularDeck());
+  const midpoint = Math.floor(deck.length / 2);
   
   return {
-    p: playerDeck,
-    c: cpuDeck,
+    p: deck.slice(0, midpoint),
+    c: deck.slice(midpoint),
     pc: null,
     cc: null,
     m: 'Welcome to War! Draw a card to begin. You have one nuke ability!',
     w: false,
+    lastDrawTime: Date.now(),
     playerNukeAvailable: true,
     cpuNukeAvailable: true,
     moveCount: 0,
+    warCount: 0,
+    color: undefined,
     colorResetPending: false
   };
 }
@@ -580,29 +574,24 @@ export const app = new Frog<{ Variables: NeynarVariables }>({
 
 app.use(neynar({ apiKey: NEYNAR_API_KEY, features: ['interactor'] }));
 function handleNukeUse(state: GameState): GameState {
-  // Create a working copy of state
-  let workingState = { ...state };
+  console.log('Processing player nuke use');
   
-  // Find and remove a nuke card from player's deck
-  const nukeIndex = workingState.p.findIndex(card => card.isNuke);
-  if (nukeIndex === -1) {
-    throw new Error('No nuke card found in player deck');
-  }
-  
-  // Remove the nuke card from player's deck
-  workingState.p.splice(nukeIndex, 1);
-  const nukeCard = { v: -1, s: '☢️', isNuke: true };
+  const nukeCard: Card = { 
+    v: 10,
+    s: '☢️',
+    isNuke: true
+  };
 
   // Handle instant win case
-  if (workingState.c.length <= 10) {
+  if (state.c.length <= 10) {
     const newState = {
-      ...workingState,
-      p: [...workingState.p, ...workingState.c],
+      ...state,
+      p: [...state.p, ...state.c],
       c: [],
       pc: nukeCard,
       cc: null,
       playerNukeAvailable: false,
-      moveCount: (workingState.moveCount || 0) + 1,
+      moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
       m: `NUKE COMPLETELY DESTROYED CPU'S FORCES!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
       color: '#4ADE80',
@@ -612,75 +601,70 @@ function handleNukeUse(state: GameState): GameState {
     return newState;
   }
 
-  // Take 10 cards from CPU
-  const nukedCards = workingState.c.splice(-10);
+  // Take 10 cards with nuke
+  const nukedCards = state.c.splice(-10);
   
   const newState = {
-    ...workingState,
-    p: [...workingState.p, ...nukedCards], // Don't add nuke back to deck
-    c: [...workingState.c],
-    pc: nukeCard,  // Show the nuke card in play
+    ...state,
+    p: [...state.p, ...nukedCards],
+    c: [...state.c],
+    pc: nukeCard,
     cc: null,
     playerNukeAvailable: false,
-    moveCount: (workingState.moveCount || 0) + 1,
+    moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
     m: `NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
     color: '#4ADE80'
   };
-  
   verifyCardCount(newState, 'PLAYER_NUKE_WITH_TURN');
   return newState;
 }
 
 function handleCpuNuke(state: GameState): GameState {
-  // Create a working copy of state
-  let workingState = { ...state };
+  console.log('Processing CPU nuke use');
   
-  // Find and remove a nuke card from CPU's deck
-  const nukeIndex = workingState.c.findIndex(card => card.isNuke);
-  if (nukeIndex === -1) {
-    throw new Error('No nuke card found in CPU deck');
-  }
-  
-  // Remove the nuke card from CPU's deck
-  workingState.c.splice(nukeIndex, 1);
-  const nukeCard = { v: -1, s: '☢️', isNuke: true };
+  const nukeCard: Card = { 
+    v: 10,
+    s: '☢️',
+    isNuke: true
+  };
 
   // Handle instant win case
-  if (workingState.p.length <= 10) {
+  if (state.p.length <= 10) {
     const newState = {
-      ...workingState,
-      c: [...workingState.c, ...workingState.p],
+      ...state,
       p: [],
+      c: [...state.c, ...state.p],
       pc: null,
       cc: nukeCard,
       cpuNukeAvailable: false,
-      moveCount: (workingState.moveCount || 0) + 1,
+      moveCount: (state.moveCount || 0) + 1,
       lastDrawTime: Date.now(),
-      m: `CPU LAUNCHED A DEVASTATING NUKE!\n☢️ YOUR FORCES WERE COMPLETELY DESTROYED! ☢️`,
-      color: '#DC2626',
-      victoryMessage: '💀 Game Over 💀'
+      m: `CPU NUKE COMPLETELY DESTROYED YOUR FORCES!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
+      color: '#FF4444',
+      victoryMessage: '💔 Defeat! 💔',
+      colorResetPending: true
     };
     verifyCardCount(newState, 'CPU_NUKE_INSTANT_WIN');
     return newState;
   }
 
-  // Take 10 cards from player
-  const nukedCards = workingState.p.splice(-10);
+  const playerCards = [...state.p];
+  const nukedCards = playerCards.splice(-10);
   
   const newState = {
-    ...workingState,
-    c: [...workingState.c, ...nukedCards], // Don't add nuke back to deck
-    p: [...workingState.p],
+    ...state,
+    p: playerCards,
+    c: [...state.c, ...nukedCards],
     pc: null,
-    cc: nukeCard,  // Show the nuke card in play
+    cc: nukeCard,
     cpuNukeAvailable: false,
-    moveCount: (workingState.moveCount || 0) + 1,
+    moveCount: (state.moveCount || 0) + 1,
     lastDrawTime: Date.now(),
-    m: `CPU LAUNCHED A DEVASTATING NUKE!\n☢️ YOU LOST 10 CARDS! ☢️`,
-    color: '#DC2626'
+    m: `CPU NUKE STOLE 10 CARDS!\n☢️ NUCLEAR STRIKE SUCCESSFUL! ☢️`,
+    color: '#FF4444',
+    colorResetPending: true
   };
-  
   verifyCardCount(newState, 'CPU_NUKE_WITH_TURN');
   return newState;
 }
@@ -855,12 +839,8 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '40px'
-  },
-  cardLabel: {
-    color: 'white',
-    fontSize: '24px',
-    marginBottom: '8px'
+    gap: '40px',
+    margin: '40px 0'
   },
   startText: {
     fontSize: '32px',
@@ -900,31 +880,6 @@ const styles = {
     padding: '24px',
     backgroundColor: 'rgba(74, 222, 128, 0.1)',
     borderRadius: '15px'
-  },
-  cardContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '8px'
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    padding: '16px',
-    width: '128px',
-    height: '176px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-  },
-  cardValue: {
-    fontSize: '36px',
-    fontWeight: 'bold'
-  },
-  cardSuit: {
-    fontSize: '48px'
   }
 } as const;
 
@@ -1100,45 +1055,9 @@ app.frame('/game', async (c) => {
             <div style={styles.cardArea}>
               {(state.pc || state.cc) ? (
                 <>
-                  <div style={styles.cardContainer}>
-                    <div style={styles.cardLabel}>PLAYER</div>
-                    {state.pc && (
-                      <div style={styles.card}>
-                        <div style={{
-                          ...styles.cardValue,
-                          color: state.pc.s === '♦' || state.pc.s === '♥' ? '#DC2626' : '#111827'
-                        }}>
-                          {state.pc.v}
-                        </div>
-                        <div style={{
-                          ...styles.cardSuit,
-                          color: state.pc.s === '♦' || state.pc.s === '♥' ? '#DC2626' : '#111827'
-                        }}>
-                          {state.pc.s}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  {state.pc && <GameCard card={state.pc} />}
                   {state.pc && state.cc && <span style={styles.vsText}>VS</span>}
-                  <div style={styles.cardContainer}>
-                    <div style={styles.cardLabel}>CPU</div>
-                    {state.cc && (
-                      <div style={styles.card}>
-                        <div style={{
-                          ...styles.cardValue,
-                          color: state.cc.s === '♦' || state.cc.s === '♥' ? '#DC2626' : '#111827'
-                        }}>
-                          {state.cc.v}
-                        </div>
-                        <div style={{
-                          ...styles.cardSuit,
-                          color: state.cc.s === '♦' || state.cc.s === '♥' ? '#DC2626' : '#111827'
-                        }}>
-                          {state.cc.s}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  {state.cc && <GameCard card={state.cc} />}
                 </>
               ) : (
                 <span style={styles.startText}>
