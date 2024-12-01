@@ -799,7 +799,7 @@ function GameCard({ card }: { card: Card }) {
   );
 }
 
-// Update styles object with cardLabel
+// Update the styles object with adjusted vertical spacing
 const styles = {
   root: {
     display: 'flex',
@@ -813,7 +813,8 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '32px'
+    justifyContent: 'space-between',
+    height: '100%'
   },
   counter: {
     display: 'flex',
@@ -840,21 +841,23 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '40px',
-    marginTop: '200px'
+    marginTop: '-60px'
   },
   startText: {
     fontSize: '32px',
     color: 'white'
   },
-  cardLabel: {
-    color: 'white',
-    fontSize: '24px',
-    marginBottom: '8px'
-  },
   vsText: {
     color: 'white',
     fontSize: '48px',
     fontWeight: 'bold'
+  },
+  warArea: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '20px',
+    marginTop: '20px'
   },
   messageArea: {
     display: 'flex',
@@ -1054,15 +1057,9 @@ app.frame('/game', async (c) => {
             <div style={styles.cardArea}>
               {(state.pc || state.cc) ? (
                 <>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={styles.cardLabel}>PLAYER</div>
-                    {state.pc && <GameCard card={state.pc} />}
-                  </div>
+                  {state.pc && <GameCard card={state.pc} />}
                   {state.pc && state.cc && <span style={styles.vsText}>VS</span>}
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={styles.cardLabel}>CPU</div>
-                    {state.cc && <GameCard card={state.cc} />}
-                  </div>
+                  {state.cc && <GameCard card={state.cc} />}
                 </>
               ) : (
                 <span style={styles.startText}>
@@ -1070,6 +1067,14 @@ app.frame('/game', async (c) => {
                 </span>
               )}
             </div>
+
+            {state.w && state.warPile && (
+              <div style={styles.warArea}>
+                {state.warPile.map((card, index) => (
+                  <GameCard key={index} card={card} />
+                ))}
+              </div>
+            )}
 
             <div style={styles.messageArea}>
               <span style={{
