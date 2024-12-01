@@ -813,7 +813,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    height: '100%'
+    gap: '32px'
   },
   counter: {
     display: 'flex',
@@ -840,18 +840,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '40px',
-    marginTop: '200px'
-  },
-  cardColumn: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '16px'
-  },
-  cardLabel: {
-    color: 'white',
-    fontSize: '24px',
-    fontWeight: 'bold'
+    margin: '40px 0'
   },
   startText: {
     fontSize: '32px',
@@ -873,8 +862,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '24px',
-    marginTop: 'auto'
+    gap: '24px'
   },
   gameMessage: {
     fontSize: '36px',
@@ -1067,19 +1055,9 @@ app.frame('/game', async (c) => {
             <div style={styles.cardArea}>
               {(state.pc || state.cc) ? (
                 <>
-                  {state.pc && (
-                    <div style={styles.cardColumn}>
-                      <span style={styles.cardLabel}>PLAYER</span>
-                      <GameCard card={state.pc} />
-                    </div>
-                  )}
+                  {state.pc && <GameCard card={state.pc} />}
                   {state.pc && state.cc && <span style={styles.vsText}>VS</span>}
-                  {state.cc && (
-                    <div style={styles.cardColumn}>
-                      <span style={styles.cardLabel}>CPU</span>
-                      <GameCard card={state.cc} />
-                    </div>
-                  )}
+                  {state.cc && <GameCard card={state.cc} />}
                 </>
               ) : (
                 <span style={styles.startText}>
