@@ -846,6 +846,11 @@ const styles = {
     fontSize: '32px',
     color: 'white'
   },
+  cardLabel: {
+    color: 'white',
+    fontSize: '24px',
+    marginBottom: '8px'
+  },
   vsText: {
     color: 'white',
     fontSize: '48px',
@@ -874,11 +879,6 @@ const styles = {
     padding: '24px',
     backgroundColor: 'rgba(74, 222, 128, 0.1)',
     borderRadius: '15px'
-  },
-  cardLabel: {
-    color: 'white',
-    fontSize: '24px',
-    marginBottom: '8px'
   }
 } as const;
 
