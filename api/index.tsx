@@ -153,7 +153,7 @@ type GameState = {
   username?: string;        // Player's username
   moveCount?: number;       // Track total moves
   warCount?: number;        // Track consecutive wars
-  fanTokenData?: {          // Fan token data
+  fanTokenData?: {          // Fan tokens data
     ownsToken: boolean;
     balance: number;
   };
