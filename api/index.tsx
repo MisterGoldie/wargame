@@ -813,20 +813,22 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '32px'
+    gap: '32px',
+    width: '100%'
   },
   counter: {
     display: 'flex',
     justifyContent: 'space-between',
     width: '100%',
-    padding: '20px 40px',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: '24px 48px',    // Slightly bigger
+    backgroundColor: 'rgba(255, 255, 255, 0.15)', 
     borderRadius: '15px'
   },
   counterText: {
     color: 'white',
-    fontSize: '32px',
-    fontWeight: 'bold'
+    fontSize: '36px',
+    fontWeight: 'bold',
+    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
   },
   tokenIndicator: {
     backgroundColor: 'rgba(74, 222, 128, 0.1)',
@@ -839,8 +841,9 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '40px',
-    margin: '40px 0'
+    gap: '50px',            // Bigger gap
+    margin: '50px 0',       // More vertical space
+    minHeight: '320px'
   },
   startText: {
     fontSize: '32px',
@@ -862,15 +865,17 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '24px'
+    gap: '28px',            // Slightly bigger
+    marginTop: '40px'
   },
   gameMessage: {
-    fontSize: '36px',
+    fontSize: '38px',       // Slightly bigger
     textAlign: 'center',
-    padding: '16px',
+    padding: '20px',        // Slightly more
     backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: '10px',
-    maxWidth: '800px'
+    borderRadius: '12px',
+    maxWidth: '800px',
+    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
   },
   victoryMessage: {
     fontSize: '48px',
