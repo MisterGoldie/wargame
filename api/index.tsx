@@ -1185,7 +1185,7 @@ function verifyCardCount(state: GameState, location: string): boolean {
   // Enhanced validationS
   const isValid = totalCards === expectedCards;
 
-  // Detailed state logging
+  // Detailed state loggings
   console.log(`🃏 ${location}:`, {
     total: totalCards,
     breakdown: cardCounts,
